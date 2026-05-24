@@ -103,6 +103,7 @@ const reverseConsoantes = {
 const canvasText = document.getElementById('canvasText');
 const ctxText = canvasText.getContext('2d');
 const input = document.getElementById('textInput');
+const toggleInputTexto = document.getElementById('toggleInputTexto');
 
 const mapVogais = { 'A': 0, 'E': 1, 'I': 2, 'O': 3, 'U': 4 };
 const mapConsoantes = {
@@ -121,8 +122,12 @@ function processarTexto(textoOriginal) {
     for (let i = 0; i < texto.length; i++) {
         const char = texto[i];
         if (char === ' ') { 
-            blocos.push(blocoAtual); 
-            blocoAtual = { grid: criarMatrizVazia(), hasCenter: false, hasRight: false, cLeft: 0, cCenter: 0, cRight: 0 }; 
+            // Só cria um novo bloco se o atual tiver conteúdo.
+            // Espaços isolados ou múltiplos não geram blocos vazios.
+            if (blocoAtual.hasCenter || blocoAtual.cLeft > 0 || blocoAtual.cRight > 0) {
+                blocos.push(blocoAtual);
+            }
+            blocoAtual = { grid: criarMatrizVazia(), hasCenter: false, hasRight: false, cLeft: 0, cCenter: 0, cRight: 0 };
             continue; 
         }
         
@@ -143,7 +148,10 @@ function processarTexto(textoOriginal) {
             if (coords) blocoAtual.grid[coords[0]][coords[1]] = Math.min(blocoAtual.cCenter, 3);
         }
     }
-    blocos.push(blocoAtual);
+    // Só adiciona o último bloco se ele tiver conteúdo real
+    if (blocoAtual.hasCenter || blocoAtual.cLeft > 0 || blocoAtual.cRight > 0) {
+        blocos.push(blocoAtual);
+    }
     return blocos;
 }
 
@@ -186,6 +194,18 @@ function renderizarModoTexto(blocos) {
 
 input.addEventListener('input', (e) => renderizarModoTexto(processarTexto(e.target.value)));
 renderizarModoTexto(processarTexto("")); 
+
+// Toggle para esconder/mostrar o input de texto no Modo Texto
+if (toggleInputTexto) {
+    toggleInputTexto.addEventListener('change', () => {
+        input.style.display = toggleInputTexto.checked ? '' : 'none';
+    });
+
+    // Estado inicial (caso o toggle venha desmarcado)
+    if (!toggleInputTexto.checked) {
+        input.style.display = 'none';
+    }
+}
 
 
 // ==========================================
