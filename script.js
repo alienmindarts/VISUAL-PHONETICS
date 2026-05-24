@@ -1,12 +1,39 @@
 // ==========================================
 // 1. CONFIGURAÇÕES VISUAIS DA GRELHA E ESTADOS
 // ==========================================
-const CELL_SIZE = 25;
-const GAP = 4;
-const BLOCK_MARGIN = 40;
-const BLOCK_WIDTH = (5 * CELL_SIZE) + (4 * GAP); 
-const ADVANCE_X = BLOCK_WIDTH + BLOCK_MARGIN;
-const Y_OFFSET_START = 10;
+let CELL_SIZE = 20;
+let GAP = 3;
+let BLOCK_MARGIN = 22;
+let Y_OFFSET_START = 8;
+
+let BLOCK_WIDTH;
+let ADVANCE_X;
+
+function updateGridSizes() {
+  const w = window.innerWidth;
+
+  if (w < 480) {
+    CELL_SIZE = 15;
+    GAP = 2;
+    BLOCK_MARGIN = 10;
+    Y_OFFSET_START = 6;
+  } else if (w < 700) {
+    CELL_SIZE = 17;
+    GAP = 2;
+    BLOCK_MARGIN = 14;
+    Y_OFFSET_START = 7;
+  } else {
+    CELL_SIZE = 20;
+    GAP = 3;
+    BLOCK_MARGIN = 22;
+    Y_OFFSET_START = 8;
+  }
+
+  BLOCK_WIDTH = (5 * CELL_SIZE) + (4 * GAP);
+  ADVANCE_X = BLOCK_WIDTH + BLOCK_MARGIN;
+}
+
+updateGridSizes();
 
 const btnTabText = document.getElementById('btnTabText');
 const btnTabDraw = document.getElementById('btnTabDraw');
@@ -114,6 +141,9 @@ function renderizarModoTexto(blocos) {
     const larguraNecessaria = Math.max(800, (blocos.length * ADVANCE_X) + 40);
     if (canvasText.width !== larguraNecessaria) canvasText.width = larguraNecessaria;
 
+    const neededHeight = Y_OFFSET_START + 5 * CELL_SIZE + 4 * GAP + 10;
+    if (canvasText.height !== neededHeight) canvasText.height = neededHeight;
+
     ctxText.clearRect(0, 0, canvasText.width, canvasText.height);
     let xOffset = 10;
 
@@ -182,9 +212,12 @@ function renderizarModoManual() {
     const larguraNecessaria = Math.max(700, (blocosManuais.length * ADVANCE_X));
     if (canvasDraw.width !== larguraNecessaria) canvasDraw.width = larguraNecessaria;
 
+    const mostrarTraducao = toggleTraducao.checked;
+    const neededHeight = Y_OFFSET_START + 5 * CELL_SIZE + 4 * GAP + (mostrarTraducao ? 26 : 8);
+    if (canvasDraw.height !== neededHeight) canvasDraw.height = neededHeight;
+
     ctxDraw.clearRect(0, 0, canvasDraw.width, canvasDraw.height);
     let xOffset = 10;
-    const mostrarTraducao = toggleTraducao.checked;
 
     blocosManuais.forEach(grid => {
         desenharEstruturaCentro(ctxDraw, xOffset);
@@ -206,9 +239,11 @@ function renderizarModoManual() {
         if (mostrarTraducao) {
             const texto = descodificarBloco(grid);
             ctxDraw.fillStyle = '#888';
-            ctxDraw.font = '16px monospace';
+            const labelSize = Math.max(11, Math.min(15, Math.floor(CELL_SIZE * 0.8)));
+            ctxDraw.font = `${labelSize}px monospace`;
             ctxDraw.textAlign = 'center';
-            ctxDraw.fillText(texto, xOffset + (BLOCK_WIDTH / 2), Y_OFFSET_START + BLOCK_WIDTH + 25);
+            const gridBottom = Y_OFFSET_START + 5 * CELL_SIZE + 4 * GAP;
+            ctxDraw.fillText(texto, xOffset + (BLOCK_WIDTH / 2), gridBottom + 14);
         }
 
         xOffset += ADVANCE_X;
@@ -289,3 +324,10 @@ function lidarComCliqueGrid(e) {
         }
     }
 }
+
+// Redimensionamento dinâmico para mobile / mais blocos por linha
+window.addEventListener('resize', () => {
+  updateGridSizes();
+  renderizarModoTexto(processarTexto(input.value));
+  renderizarModoManual();
+});

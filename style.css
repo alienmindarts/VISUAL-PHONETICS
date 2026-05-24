@@ -146,6 +146,15 @@ input:checked + .slider:before { transform: translateX(22px); }
         align-self: flex-end;
         margin-top: 8px;
     }
+    .canvas-container,
+    .canvas-scroll-area {
+        padding: 10px;
+    }
+    .add-block-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 1.6rem;
+    }
 }
 
 canvas {
