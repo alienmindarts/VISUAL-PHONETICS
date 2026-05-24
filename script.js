@@ -8,6 +8,7 @@ let Y_OFFSET_START = 8;
 
 let BLOCK_WIDTH;
 let ADVANCE_X;
+let BLOCK_ROW_GAP = 20;
 
 function updateGridSizes() {
   const w = window.innerWidth;
@@ -31,6 +32,15 @@ function updateGridSizes() {
 
   BLOCK_WIDTH = (5 * CELL_SIZE) + (4 * GAP);
   ADVANCE_X = BLOCK_WIDTH + BLOCK_MARGIN;
+
+  // Espaçamento vertical entre linhas de blocos (mais apertado em mobile)
+  if (w < 480) {
+    BLOCK_ROW_GAP = 14;
+  } else if (w < 700) {
+    BLOCK_ROW_GAP = 16;
+  } else {
+    BLOCK_ROW_GAP = 20;
+  }
 }
 
 updateGridSizes();
@@ -68,11 +78,11 @@ function desenharFormaCelula(ctx, x, y, estado) {
     }
 }
 
-function desenharEstruturaCentro(ctx, xOffset) {
+function desenharEstruturaCentro(ctx, xOffset, baseY = Y_OFFSET_START) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; 
     ctx.lineWidth = 1;
     const startX = xOffset + 1 * (CELL_SIZE + GAP) - (GAP / 2);
-    const startY = Y_OFFSET_START + 1 * (CELL_SIZE + GAP) - (GAP / 2);
+    const startY = baseY + 1 * (CELL_SIZE + GAP) - (GAP / 2);
     const size = (3 * CELL_SIZE) + (3 * GAP);
     ctx.strokeRect(startX, startY, size, size);
 }
@@ -138,26 +148,39 @@ function processarTexto(textoOriginal) {
 }
 
 function renderizarModoTexto(blocos) {
-    const larguraNecessaria = Math.max(800, (blocos.length * ADVANCE_X) + 40);
-    if (canvasText.width !== larguraNecessaria) canvasText.width = larguraNecessaria;
+    const parent = canvasText.parentElement;
+    const available = Math.max(280, parent.clientWidth - 24);
 
-    const neededHeight = Y_OFFSET_START + 5 * CELL_SIZE + 4 * GAP + 10;
-    if (canvasText.height !== neededHeight) canvasText.height = neededHeight;
+    const blocksPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
+    const numRows = Math.ceil(Math.max(1, blocos.length) / blocksPerRow);
+
+    const canvasW = Math.min(available, blocksPerRow * ADVANCE_X + 16);
+    if (canvasText.width !== canvasW) canvasText.width = canvasW;
+
+    const blockContentH = 5 * CELL_SIZE + 4 * GAP;
+    const rowH = blockContentH + BLOCK_ROW_GAP;
+    const neededH = Y_OFFSET_START + numRows * rowH + 4;
+    if (canvasText.height !== neededH) canvasText.height = neededH;
 
     ctxText.clearRect(0, 0, canvasText.width, canvasText.height);
-    let xOffset = 10;
 
-    blocos.forEach(bloco => {
-        desenharEstruturaCentro(ctxText, xOffset);
+    blocos.forEach((bloco, i) => {
+        const row = Math.floor(i / blocksPerRow);
+        const col = i % blocksPerRow;
+
+        const xOffset = 10 + col * ADVANCE_X;
+        const baseY = Y_OFFSET_START + row * rowH;
+
+        desenharEstruturaCentro(ctxText, xOffset, baseY);
+
         for (let l = 0; l < 5; l++) {
             for (let c = 0; c < 5; c++) {
                 const estado = bloco.grid[l][c];
                 const xPos = xOffset + (c * (CELL_SIZE + GAP));
-                const yPos = Y_OFFSET_START + (l * (CELL_SIZE + GAP));
+                const yPos = baseY + (l * (CELL_SIZE + GAP));
                 desenharFormaCelula(ctxText, xPos, yPos, estado);
             }
         }
-        xOffset += ADVANCE_X;
     });
 }
 
@@ -209,23 +232,38 @@ function descodificarBloco(grid) {
 }
 
 function renderizarModoManual() {
-    const larguraNecessaria = Math.max(700, (blocosManuais.length * ADVANCE_X));
-    if (canvasDraw.width !== larguraNecessaria) canvasDraw.width = larguraNecessaria;
+    const parent = canvasDraw.parentElement;
+    const available = Math.max(280, parent.clientWidth - 24);
+
+    const blocksPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
+    const numRows = Math.ceil(Math.max(1, blocosManuais.length) / blocksPerRow);
+
+    const canvasW = Math.min(available, blocksPerRow * ADVANCE_X + 16);
+    if (canvasDraw.width !== canvasW) canvasDraw.width = canvasW;
 
     const mostrarTraducao = toggleTraducao.checked;
-    const neededHeight = Y_OFFSET_START + 5 * CELL_SIZE + 4 * GAP + (mostrarTraducao ? 26 : 8);
-    if (canvasDraw.height !== neededHeight) canvasDraw.height = neededHeight;
+    const blockContentH = 5 * CELL_SIZE + 4 * GAP;
+    const extraForLabel = mostrarTraducao ? 18 : 0;
+    const rowH = blockContentH + BLOCK_ROW_GAP + extraForLabel;
+
+    const neededH = Y_OFFSET_START + numRows * rowH + 6;
+    if (canvasDraw.height !== neededH) canvasDraw.height = neededH;
 
     ctxDraw.clearRect(0, 0, canvasDraw.width, canvasDraw.height);
-    let xOffset = 10;
 
-    blocosManuais.forEach(grid => {
-        desenharEstruturaCentro(ctxDraw, xOffset);
+    blocosManuais.forEach((grid, i) => {
+        const row = Math.floor(i / blocksPerRow);
+        const col = i % blocksPerRow;
+
+        const xOffset = 10 + col * ADVANCE_X;
+        const baseY = Y_OFFSET_START + row * (blockContentH + BLOCK_ROW_GAP);
+
+        desenharEstruturaCentro(ctxDraw, xOffset, baseY);
 
         for (let l = 0; l < 5; l++) {
             for (let c = 0; c < 5; c++) {
                 const xPos = xOffset + (c * (CELL_SIZE + GAP));
-                const yPos = Y_OFFSET_START + (l * (CELL_SIZE + GAP));
+                const yPos = baseY + (l * (CELL_SIZE + GAP));
                 
                 ctxDraw.strokeStyle = 'rgba(255, 255, 255, 0.05)';
                 ctxDraw.lineWidth = 1;
@@ -242,11 +280,9 @@ function renderizarModoManual() {
             const labelSize = Math.max(11, Math.min(15, Math.floor(CELL_SIZE * 0.8)));
             ctxDraw.font = `${labelSize}px monospace`;
             ctxDraw.textAlign = 'center';
-            const gridBottom = Y_OFFSET_START + 5 * CELL_SIZE + 4 * GAP;
+            const gridBottom = baseY + blockContentH;
             ctxDraw.fillText(texto, xOffset + (BLOCK_WIDTH / 2), gridBottom + 14);
         }
-
-        xOffset += ADVANCE_X;
     });
 }
 
@@ -256,7 +292,11 @@ btnAddNewBlock.addEventListener('click', () => {
     blocosManuais.push(criarMatrizVazia());
     renderizarModoManual();
     setTimeout(() => {
-        btnAddNewBlock.parentElement.scrollLeft = btnAddNewBlock.parentElement.scrollWidth;
+        // Em layout vertical, rolar para o fundo quando adicionamos bloco novo
+        const container = btnAddNewBlock.parentElement;
+        if (container.scrollHeight > container.clientHeight) {
+            container.scrollTop = container.scrollHeight;
+        }
     }, 50);
 });
 
@@ -272,15 +312,29 @@ function lidarComCliqueGrid(e) {
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    for (let b = 0; b < blocosManuais.length; b++) {
-        const blocoStartX = 10 + (b * ADVANCE_X);
-        const blocoEndX = blocoStartX + BLOCK_WIDTH;
-        const blocoEndY = Y_OFFSET_START + BLOCK_WIDTH;
+    const parent = canvasDraw.parentElement;
+    const available = Math.max(280, parent.clientWidth - 24);
+    const blocksPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
 
-        if (clickX >= blocoStartX && clickX <= blocoEndX && clickY >= Y_OFFSET_START && clickY <= blocoEndY) {
+    const blockContentH = 5 * CELL_SIZE + 4 * GAP;
+    const rowH = blockContentH + BLOCK_ROW_GAP;
+
+    for (let b = 0; b < blocosManuais.length; b++) {
+        const row = Math.floor(b / blocksPerRow);
+        const col = b % blocksPerRow;
+
+        const blocoStartX = 10 + col * ADVANCE_X;
+        const blocoStartY = Y_OFFSET_START + row * rowH;
+
+        const blocoEndX = blocoStartX + BLOCK_WIDTH;
+        const blocoEndY = blocoStartY + blockContentH;
+
+        if (clickX >= blocoStartX && clickX <= blocoEndX &&
+            clickY >= blocoStartY && clickY <= blocoEndY) {
+
             const localX = clickX - blocoStartX;
-            const localY = clickY - Y_OFFSET_START;
-            
+            const localY = clickY - blocoStartY;
+
             const coluna = Math.floor(localX / (CELL_SIZE + GAP));
             const linha = Math.floor(localY / (CELL_SIZE + GAP));
 
@@ -299,7 +353,7 @@ function lidarComCliqueGrid(e) {
 
                     if (seccao !== null) {
                         let celulasAtivasNaSeccao = 0;
-                        
+
                         // Conta quantas células já estão ativas nesta secção específica
                         if (seccao === "esquerda") {
                             for (let l = 0; l < 5; l++) if (blocosManuais[b][l][0] > 0) celulasAtivasNaSeccao++;
@@ -317,7 +371,7 @@ function lidarComCliqueGrid(e) {
                         blocosManuais[b][linha][coluna] = Math.min(celulasAtivasNaSeccao + 1, 3);
                     }
                 }
-                
+
                 renderizarModoManual();
                 return;
             }
