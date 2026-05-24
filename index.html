@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alfabeto Fonético 5x5</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Alfabeto 5x5</h1>
+        <input type="text" id="textInput" placeholder="Escreve aqui..." autocomplete="off">
+        
+        <div class="controls">
+            <label class="switch-container">
+                <input type="checkbox" id="gridToggle">
+                <span class="slider"></span>
+            </label>
+            <span class="controls-label">Mostrar grelhas de suporte</span>
+        </div>
+        
+        <canvas id="canvasGrid" width="800" height="300"></canvas>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
