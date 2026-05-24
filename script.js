@@ -22,15 +22,14 @@ const mapVogais = { 'A': 0, 'E': 1, 'I': 2, 'O': 3, 'U': 4 };
 const mapConsoantes = {
     'T': [1, 1], 'D': [1, 1], 
     'N': [1, 2],              
-    'G': [3, 1],  
     'M': [1, 3],              
     'R': [2, 1],              
     'L': [2, 2],              
-    'J': [2, 3], 'C': [3, 1], 
+    'J': [2, 3], 'C': [2, 3], 
     'K': [3, 1], 'Q': [3, 1], 
     'F': [3, 2], 'V': [3, 2], 
     'P': [3, 3], 'B': [3, 3], 
-    'S': null, 'Z': null, 'X': null,      
+    'S': null, 'Z': null      
 };
 
 // ==========================================
@@ -47,6 +46,7 @@ function processarTexto(textoOriginal) {
     function criarNovoBloco() {
         return {
             grid: Array(5).fill(0).map(() => Array(5).fill(0)), 
+            hasContent: false, // NOVA FLAG: Verifica se a grelha já tem desenhos
             hasCenter: false,
             hasRight: false,
             countLeft: 0,
@@ -56,18 +56,31 @@ function processarTexto(textoOriginal) {
     }
 
     let blocoAtual = criarNovoBloco();
+    let aguardarNovaPalavra = false; // NOVA FLAG: Gere a ação do espaço
 
     for (let i = 0; i < texto.length; i++) {
         const char = texto[i];
 
+        // Se for um espaço, apenas avisamos o sistema para aguardar a próxima letra
         if (char === ' ') {
-            blocos.push(blocoAtual);
-            blocoAtual = criarNovoBloco();
+            aguardarNovaPalavra = true;
             continue;
         }
 
         const isVogal = mapVogais[char] !== undefined;
         const isConsoante = mapConsoantes[char] !== undefined || char === 'S' || char === 'Z';
+
+        if (isVogal || isConsoante) {
+            // Se carregámos no espaço antes e o bloco atual já tem algo desenhado, 
+            // fechamos o bloco e abrimos o da nova palavra.
+            if (aguardarNovaPalavra && blocoAtual.hasContent) {
+                blocos.push(blocoAtual);
+                blocoAtual = criarNovoBloco();
+            }
+            
+            aguardarNovaPalavra = false;  // Reset do espaço
+            blocoAtual.hasContent = true; // O bloco ganha conteúdo
+        }
 
         if (isVogal) {
             let linha = mapVogais[char];
@@ -87,6 +100,7 @@ function processarTexto(textoOriginal) {
             if (blocoAtual.hasRight) {
                 blocos.push(blocoAtual);
                 blocoAtual = criarNovoBloco();
+                blocoAtual.hasContent = true; // O novo bloco já nasce com a consoante
             }
 
             blocoAtual.hasCenter = true;
@@ -120,23 +134,19 @@ function desenharBlocos(blocos) {
 
         // --- PASSO A: SE ATIVADO, DESENHA A GRELHA DE SUPORTE EM SEGUNDO PLANO ---
         if (showGrid) {
-            // 1. Limite exterior de todo o bloco 5x5
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
             ctx.lineWidth = 1;
             ctx.strokeRect(xOffset - 4, yOffset - 4, blockSize + 8, blockSize + 8);
 
-            // 2. Limite interior que destaca o quadrado 3x3 central (Consoantes)
-            // As colunas e linhas centrais começam no índice 1 e terminam no 3
             const innerStartX = xOffset + (CELL_SIZE + GAP);
             const innerStartY = yOffset + (CELL_SIZE + GAP);
-            const innerSize = (3 * CELL_SIZE) + (2 * GAP); // Largura/Altura exata do 3x3
+            const innerSize = (3 * CELL_SIZE) + (2 * GAP); 
             
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'; // Linha um pouco mais brilhante
-            ctx.setLineDash([4, 4]); // Torna a linha tracejada (opcional, dá um ar mais técnico!)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'; 
+            ctx.setLineDash([4, 4]); 
             ctx.strokeRect(innerStartX - 2, innerStartY - 2, innerSize + 4, innerSize + 4);
-            ctx.setLineDash([]); // Volta a colocar a linha sólida para os restantes desenhos
+            ctx.setLineDash([]); 
 
-            // 3. Desenha cada uma das 25 células a cinzento muito ténue
             for (let linha = 0; linha < 5; linha++) {
                 for (let coluna = 0; coluna < 5; coluna++) {
                     const xPos = xOffset + (coluna * (CELL_SIZE + GAP));
