@@ -65,7 +65,7 @@ function desenharFormaCelula(ctx, x, y, estado) {
     if (estado === 0) return;
     ctx.strokeStyle = '#ffffff'; ctx.fillStyle = '#ffffff'; ctx.lineWidth = 2;
     
-    if (estado === 1) { 
+    if (estado === 1 || estado === 4) { 
         ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE); 
     } else if (estado === 2 || estado === 3) { 
         ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE); 
@@ -75,6 +75,17 @@ function desenharFormaCelula(ctx, x, y, estado) {
         ctx.beginPath();
         ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 3.5, 0, Math.PI * 2);
         ctx.fill();
+    }
+    
+    if (estado === 4) {
+        // Estado 4: célula preenchida + círculo vazio (stroke) ao centro
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 3.5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
     }
 }
 
@@ -134,9 +145,9 @@ function processarTexto(textoOriginal) {
         if (mapVogais[char] !== undefined) {
             let linha = mapVogais[char];
             if (!blocoAtual.hasCenter) {
-                blocoAtual.cLeft++; blocoAtual.grid[linha][0] = Math.min(blocoAtual.cLeft, 3);
+                blocoAtual.cLeft++; blocoAtual.grid[linha][0] = Math.min(blocoAtual.cLeft, 4);
             } else {
-                blocoAtual.hasRight = true; blocoAtual.cRight++; blocoAtual.grid[linha][4] = Math.min(blocoAtual.cRight, 3);
+                blocoAtual.hasRight = true; blocoAtual.cRight++; blocoAtual.grid[linha][4] = Math.min(blocoAtual.cRight, 4);
             }
         } else if (mapConsoantes[char] !== undefined || char === 'S' || char === 'Z') {
             if (blocoAtual.hasRight) { 
@@ -145,7 +156,7 @@ function processarTexto(textoOriginal) {
             }
             blocoAtual.hasCenter = true; blocoAtual.cCenter++;
             const coords = mapConsoantes[char];
-            if (coords) blocoAtual.grid[coords[0]][coords[1]] = Math.min(blocoAtual.cCenter, 3);
+            if (coords) blocoAtual.grid[coords[0]][coords[1]] = Math.min(blocoAtual.cCenter, 4);
         }
     }
     // Só adiciona o último bloco se ele tiver conteúdo real
@@ -363,7 +374,7 @@ function lidarComCliqueGrid(e) {
 
                 if (estadoAtual > 0) {
                     // Célula já ativa: Itera normalmente para permitir edição ou apagar (0)
-                    blocosManuais[b][linha][coluna] = (estadoAtual + 1) % 4;
+                    blocosManuais[b][linha][coluna] = (estadoAtual + 1) % 5;
                 } else {
                     // Célula nova: Determina a secção e calcula o estado sequencial
                     let seccao = null;
@@ -387,8 +398,8 @@ function lidarComCliqueGrid(e) {
                             }
                         }
 
-                        // Define o estado (1, 2 ou 3). Se já houver 3 ativas, a 4ª recebe estado 3 por defeito.
-                        blocosManuais[b][linha][coluna] = Math.min(celulasAtivasNaSeccao + 1, 3);
+                        // Define o estado (1-4). Se já houver 4 ativas, a 5ª recebe estado 4 por defeito.
+                        blocosManuais[b][linha][coluna] = Math.min(celulasAtivasNaSeccao + 1, 4);
                     }
                 }
 
