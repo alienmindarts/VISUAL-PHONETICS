@@ -108,7 +108,7 @@ const toggleInputTexto = document.getElementById('toggleInputTexto');
 const mapVogais = { 'A': 0, 'E': 1, 'I': 2, 'O': 3, 'U': 4 };
 const mapConsoantes = {
     'T': [1, 1], 'D': [1, 1], 'N': [1, 2], 'M': [1, 3], 'R': [2, 1],
-    'L': [2, 2], 'J': [2, 3], 'C': [2, 3], 'X': [2, 3], 'K': [3, 1], 'Q': [3, 1], 'G': [3, 1],
+    'L': [2, 2], 'J': [2, 3], 'C': [3, 1], 'X': [2, 3], 'K': [3, 1], 'Q': [3, 1], 'G': [3, 1],
     'F': [3, 2], 'V': [3, 2], 'P': [3, 3], 'B': [3, 3], 'S': null, 'Z': null
 };
 
