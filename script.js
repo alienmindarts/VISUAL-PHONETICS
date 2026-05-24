@@ -4,6 +4,7 @@
 const CELL_SIZE = 25;   
 const GAP = 4;          
 const BLOCK_MARGIN = 40;
+const ROW_MARGIN = 40;  // Novo: Margem vertical entre as linhas de blocos
 
 // Elementos do DOM
 const canvas = document.getElementById('canvasGrid');
@@ -11,7 +12,6 @@ const ctx = canvas.getContext('2d');
 const input = document.getElementById('textInput');
 const gridToggle = document.getElementById('gridToggle');
 
-// Estado da grelha (ligado/desligado)
 let showGrid = false;
 
 // ==========================================
@@ -22,14 +22,15 @@ const mapVogais = { 'A': 0, 'E': 1, 'I': 2, 'O': 3, 'U': 4 };
 const mapConsoantes = {
     'T': [1, 1], 'D': [1, 1], 
     'N': [1, 2],              
-    'M': [1, 3],              
+    'M': [1, 3],
+    'G': [3, 1],              
     'R': [2, 1],              
     'L': [2, 2],              
-    'J': [2, 3], 'C': [2, 3], 
+    'J': [2, 3], 'C': [3, 1], 
     'K': [3, 1], 'Q': [3, 1], 
     'F': [3, 2], 'V': [3, 2], 
     'P': [3, 3], 'B': [3, 3], 
-    'S': null, 'Z': null      
+    'S': null, 'Z': null, 'X': null,      
 };
 
 // ==========================================
@@ -46,7 +47,7 @@ function processarTexto(textoOriginal) {
     function criarNovoBloco() {
         return {
             grid: Array(5).fill(0).map(() => Array(5).fill(0)), 
-            hasContent: false, // NOVA FLAG: Verifica se a grelha já tem desenhos
+            hasContent: false, 
             hasCenter: false,
             hasRight: false,
             countLeft: 0,
@@ -56,30 +57,28 @@ function processarTexto(textoOriginal) {
     }
 
     let blocoAtual = criarNovoBloco();
-    let aguardarNovaPalavra = false; // NOVA FLAG: Gere a ação do espaço
+    let aguardarNovaPalavra = false; 
 
     for (let i = 0; i < texto.length; i++) {
         const char = texto[i];
 
-        // Se for um espaço, apenas avisamos o sistema para aguardar a próxima letra
         if (char === ' ') {
             aguardarNovaPalavra = true;
             continue;
         }
 
         const isVogal = mapVogais[char] !== undefined;
-        const isConsoante = mapConsoantes[char] !== undefined || char === 'S' || char === 'Z';
+        // Atualizado para incluir explicitamente o X na validação
+        const isConsoante = mapConsoantes[char] !== undefined || char === 'S' || char === 'Z' || char === 'X';
 
         if (isVogal || isConsoante) {
-            // Se carregámos no espaço antes e o bloco atual já tem algo desenhado, 
-            // fechamos o bloco e abrimos o da nova palavra.
             if (aguardarNovaPalavra && blocoAtual.hasContent) {
                 blocos.push(blocoAtual);
                 blocoAtual = criarNovoBloco();
             }
             
-            aguardarNovaPalavra = false;  // Reset do espaço
-            blocoAtual.hasContent = true; // O bloco ganha conteúdo
+            aguardarNovaPalavra = false;  
+            blocoAtual.hasContent = true; 
         }
 
         if (isVogal) {
@@ -100,7 +99,7 @@ function processarTexto(textoOriginal) {
             if (blocoAtual.hasRight) {
                 blocos.push(blocoAtual);
                 blocoAtual = criarNovoBloco();
-                blocoAtual.hasContent = true; // O novo bloco já nasce com a consoante
+                blocoAtual.hasContent = true; 
             }
 
             blocoAtual.hasCenter = true;
@@ -121,18 +120,54 @@ function processarTexto(textoOriginal) {
 }
 
 // ==========================================
-// 4. MOTOR DE RENDERIZAÇÃO
+// 4. RESPONSIVIDADE DO CANVAS (NOVO)
+// ==========================================
+function ajustarLarguraCanvas() {
+    // Ajusta a largura para o tamanho da janela, com um limite máximo de 800px para computadores
+    const margemEcra = window.innerWidth < 600 ? 20 : 40;
+    canvas.width = Math.min(window.innerWidth - margemEcra, 800);
+}
+
+// ==========================================
+// 5. MOTOR DE RENDERIZAÇÃO
 // ==========================================
 function desenharBlocos(blocos) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const startX = 20; 
+    const startY = 20; 
+    const blockSize = 5 * CELL_SIZE + 4 * GAP;
+
+    // PARTE 1: Calcular a altura necessária do Canvas antes de desenhar
+    let tempX = startX;
+    let tempY = startY;
     
-    let xOffset = 20; 
-    const yOffset = 20; 
+    blocos.forEach(bloco => {
+        // Se o próximo bloco ultrapassar a largura do canvas, fazemos quebra de linha visual
+        if (tempX + blockSize > canvas.width && tempX !== startX) {
+            tempX = startX;
+            tempY += blockSize + ROW_MARGIN;
+        }
+        tempX += blockSize + BLOCK_MARGIN;
+    });
+
+    // Ajustar a altura real do elemento HTML canvas para caber tudo
+    canvas.height = tempY + blockSize + startY;
+
+    // Limpar o canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // PARTE 2: Desenhar efetivamente os blocos nas posições calculadas
+    let xOffset = startX;
+    let yOffset = startY;
 
     blocos.forEach(bloco => {
-        const blockSize = 5 * CELL_SIZE + 4 * GAP;
+        
+        // Aplica a quebra de linha real
+        if (xOffset + blockSize > canvas.width && xOffset !== startX) {
+            xOffset = startX;
+            yOffset += blockSize + ROW_MARGIN;
+        }
 
-        // --- PASSO A: SE ATIVADO, DESENHA A GRELHA DE SUPORTE EM SEGUNDO PLANO ---
+        // --- PASSO A: GRELHA DE SUPORTE ---
         if (showGrid) {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
             ctx.lineWidth = 1;
@@ -158,7 +193,7 @@ function desenharBlocos(blocos) {
             }
         }
 
-        // --- PASSO B: DESENHA AS LETRAS ATIVAS DO BLOCO ---
+        // --- PASSO B: LETRAS ATIVAS ---
         for (let linha = 0; linha < 5; linha++) {
             for (let coluna = 0; coluna < 5; coluna++) {
                 
@@ -190,23 +225,34 @@ function desenharBlocos(blocos) {
             }
         }
         
+        // Avançar para o lado
         xOffset += blockSize + BLOCK_MARGIN;
     });
 }
 
 // ==========================================
-// 5. EVENT LISTENERS (AÇÃO EM TEMPO REAL)
+// 6. EVENT LISTENERS
 // ==========================================
 
-input.addEventListener('input', (e) => {
-    const blocosProcessados = processarTexto(e.target.value);
+// Função auxiliar para redesenhar tudo
+function atualizarEcra() {
+    const blocosProcessados = processarTexto(input.value);
     desenharBlocos(blocosProcessados);
+}
+
+// Quando redimensionamos a janela do PC ou rodamos o telemóvel
+window.addEventListener('resize', () => {
+    ajustarLarguraCanvas();
+    atualizarEcra();
 });
+
+input.addEventListener('input', atualizarEcra);
 
 gridToggle.addEventListener('change', (e) => {
     showGrid = e.target.checked;
-    const blocosProcessados = processarTexto(input.value);
-    desenharBlocos(blocosProcessados);
+    atualizarEcra();
 });
 
-desenharBlocos([ { grid: Array(5).fill(0).map(() => Array(5).fill(0)) } ]);
+// Arranque inicial
+ajustarLarguraCanvas();
+atualizarEcra();

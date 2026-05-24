@@ -99,4 +99,6 @@ canvas {
     background-color: #222;
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    max-width: 100%; /* Garante que não sai do ecrã no telemóvel */
+    height: auto;
 }
