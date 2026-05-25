@@ -168,7 +168,7 @@ const mapVogais = { 'A': 0, 'E': 1, 'I': 2, 'O': 3, 'U': 4 };
 const mapConsoantes = {
     'T': [1, 1], 'D': [1, 1], 'N': [1, 2], 'M': [1, 3], 'R': [2, 1],
     'L': [2, 2], 'J': [2, 3], 'C': [3, 1], 'X': [2, 3], 'K': [3, 1], 'Q': [3, 1], 'G': [3, 1],
-    'F': [3, 2], 'V': [3, 2], 'P': [3, 3], 'B': [3, 3], 'S': null, 'Z': null
+    'F': [3, 2], 'V': [3, 2], 'P': [3, 3], 'B': [3, 3], 'Ç': null, 'S': null, 'Z': null
 };
 
 function criarMatrizVazia() { return Array(5).fill(0).map(() => Array(5).fill(0)); }
@@ -204,22 +204,7 @@ function processarTexto(textoOriginal) {
             }
             blocoAtual.hasCenter = true; blocoAtual.cCenter++;
             const coords = mapConsoantes[char];
-            if (coords) {
-                blocoAtual.grid[coords[0]][coords[1]] = Math.min(blocoAtual.cCenter, 4);
-            } else {
-                // S/Z só marca [0,2] se já existir consoante real anterior no bloco
-                let hasPrevious = false;
-                for (let l = 1; l <= 3; l++) {
-                    for (let c = 1; c <= 3; c++) {
-                        if (blocoAtual.grid[l][c] > 0) { hasPrevious = true; break; }
-                    }
-                    if (hasPrevious) break;
-                }
-                if (hasPrevious) {
-                    blocoAtual.grid[0][2] = Math.min(blocoAtual.cCenter, 4);
-                }
-                // Se for a primeira/única consoante null → centro fica vazio (comportamento antigo)
-            }
+            if (coords) blocoAtual.grid[coords[0]][coords[1]] = Math.min(blocoAtual.cCenter, 4);
         }
     }
     // Só adiciona o último bloco se ele tiver conteúdo real
@@ -273,10 +258,6 @@ function descodificarBloco(grid) {
                 else if (c === 4) right.push({ char: reverseVogais[l], state: estado });
                 else if (l >= 1 && l <= 3 && c >= 1 && c <= 3) {
                     center.push({ char: reverseConsoantes[`${l},${c}`], state: estado });
-                    hasConsoanteCentro = true;
-                } else if (l === 0 && c === 2) {
-                    // Marcador de S/Z (null consonant) na célula [0,2]
-                    center.push({ char: 'S', state: estado });
                     hasConsoanteCentro = true;
                 }
             }
@@ -414,10 +395,7 @@ function lidarComCliqueGrid(e) {
                     let seccao = null;
                     if (coluna === 0) seccao = "esquerda";
                     else if (coluna === 4) seccao = "direita";
-                    else if (
-                        (coluna >= 1 && coluna <= 3 && linha >= 1 && linha <= 3) ||
-                        (coluna === 2 && linha === 0)
-                    ) seccao = "centro";
+                    else if (coluna >= 1 && coluna <= 3 && linha >= 1 && linha <= 3) seccao = "centro";
 
                     if (seccao !== null) {
                         let celulasAtivasNaSeccao = 0;
@@ -433,8 +411,6 @@ function lidarComCliqueGrid(e) {
                                     if (blocosManuais[b][l][c] > 0) celulasAtivasNaSeccao++;
                                 }
                             }
-                            // Contar também o marcador de S/Z na célula [0,2]
-                            if (blocosManuais[b][0][2] > 0) celulasAtivasNaSeccao++;
                         }
 
                         // Define o estado (1-4). Se já houver 4 ativas, a 5ª recebe estado 4 por defeito.
@@ -487,5 +463,5 @@ window.addEventListener('resize', () => {
   updateGridSizes();
   renderizarModoTexto(processarTexto(input.value));
   renderizarModoManual();
-  if (tabGame.classList.contains('active')) renderizarJogo();
+  if (tabGame && tabGame.classList.contains('active')) renderizarJogo();
 });

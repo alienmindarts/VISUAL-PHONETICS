@@ -18,5 +18,6 @@ const PALAVRAS_JOGO = [
   "PARE",
   "FILME",
   "PORTA",
+  "Capitao iglo das neves",
   "AMIGO"
 ];
