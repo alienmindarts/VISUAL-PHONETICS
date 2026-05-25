@@ -13,6 +13,7 @@
         <div class="tabs">
             <button id="btnTabText" class="tab-btn active">Modo Texto</button>
             <button id="btnTabDraw" class="tab-btn">Modo Desenho</button>
+            <button id="btnTabGame" class="tab-btn">Modo Jogo</button>
         </div>
 
         <div id="tabText" class="tab-content active">
@@ -49,8 +50,19 @@
                 <button id="btnAddNewBlock" class="add-block-btn">+</button>
             </div>
         </div>
+
+        <div id="tabGame" class="tab-content">
+            <p class="instrucoes">Observa os blocos e escreve a palavra correspondente.</p>
+            <div class="canvas-container">
+                <canvas id="canvasGame" width="600" height="100"></canvas>
+            </div>
+            <input type="text" id="gameInput" placeholder="Escreve a palavra..." autocomplete="off">
+            <div id="feedbackGame"></div>
+            <button id="btnNovaPalavra" class="add-block-btn">Nova Palavra</button>
+        </div>
     </div>
 
+    <script src="data/palavras-jogo.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

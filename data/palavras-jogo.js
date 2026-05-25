@@ -1,0 +1,22 @@
+const PALAVRAS_JOGO = [
+  "CASA",
+  "RATO",
+  "GATO",
+  "MESA",
+  "LIVRO",
+  "FOGO",
+  "PATO",
+  "BOLA",
+  "SOL",
+  "LUA",
+  "RIO",
+  "VELA",
+  "JOGO",
+  "CIMA",
+  "NOME",
+  "TELA",
+  "PARE",
+  "FILME",
+  "PORTA",
+  "AMIGO"
+];

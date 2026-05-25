@@ -49,16 +49,35 @@ const btnTabText = document.getElementById('btnTabText');
 const btnTabDraw = document.getElementById('btnTabDraw');
 const tabText = document.getElementById('tabText');
 const tabDraw = document.getElementById('tabDraw');
+const btnTabGame = document.getElementById('btnTabGame');
+const tabGame = document.getElementById('tabGame');
+
+let palavraAtualJogo = "";
+let blocosJogo = [];
+
+const canvasGame = document.getElementById('canvasGame');
+const ctxGame = canvasGame.getContext('2d');
+const inputGame = document.getElementById('gameInput');
+const feedbackGame = document.getElementById('feedbackGame');
+const btnNovaPalavra = document.getElementById('btnNovaPalavra');
 
 btnTabText.addEventListener('click', () => {
-    btnTabText.classList.add('active'); btnTabDraw.classList.remove('active');
-    tabText.classList.add('active'); tabDraw.classList.remove('active');
+    btnTabText.classList.add('active'); btnTabDraw.classList.remove('active'); btnTabGame.classList.remove('active');
+    tabText.classList.add('active'); tabDraw.classList.remove('active'); tabGame.classList.remove('active');
 });
 
 btnTabDraw.addEventListener('click', () => {
-    btnTabDraw.classList.add('active'); btnTabText.classList.remove('active');
-    tabDraw.classList.add('active'); tabText.classList.remove('active');
+    btnTabDraw.classList.add('active'); btnTabText.classList.remove('active'); btnTabGame.classList.remove('active');
+    tabDraw.classList.add('active'); tabText.classList.remove('active'); tabGame.classList.remove('active');
     renderizarModoManual();
+});
+
+btnTabGame.addEventListener('click', () => {
+    btnTabGame.classList.add('active'); btnTabText.classList.remove('active'); btnTabDraw.classList.remove('active');
+    tabGame.classList.add('active'); tabText.classList.remove('active'); tabDraw.classList.remove('active');
+    requestAnimationFrame(() => {
+      if (!palavraAtualJogo) iniciarNovaRodadaJogo(); else renderizarJogo();
+    });
 });
 
 function desenharFormaCelula(ctx, x, y, estado) {
@@ -96,6 +115,35 @@ function desenharEstruturaCentro(ctx, xOffset, baseY = Y_OFFSET_START) {
     const startY = baseY + 1 * (CELL_SIZE + GAP) - (GAP / 2);
     const size = (3 * CELL_SIZE) + (3 * GAP);
     ctx.strokeRect(startX, startY, size, size);
+}
+
+function renderizarBlocosEmCanvas(canvas, ctx, blocos) {
+    const parent = canvas.parentElement;
+    const available = Math.max(280, parent.clientWidth - 24);
+    const blocksPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
+    const numRows = Math.ceil(Math.max(1, blocos.length) / blocksPerRow);
+    const canvasW = Math.min(available, blocksPerRow * ADVANCE_X + 16);
+    if (canvas.width !== canvasW) canvas.width = canvasW;
+    const blockContentH = 5 * CELL_SIZE + 4 * GAP;
+    const rowH = blockContentH + BLOCK_ROW_GAP;
+    const neededH = Y_OFFSET_START + numRows * rowH + 4;
+    if (canvas.height !== neededH) canvas.height = neededH;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    blocos.forEach((bloco, i) => {
+        const row = Math.floor(i / blocksPerRow);
+        const col = i % blocksPerRow;
+        const xOffset = 10 + col * ADVANCE_X;
+        const baseY = Y_OFFSET_START + row * rowH;
+        desenharEstruturaCentro(ctx, xOffset, baseY);
+        for (let l = 0; l < 5; l++) {
+            for (let c = 0; c < 5; c++) {
+                const estado = bloco.grid[l][c];
+                const xPos = xOffset + (c * (CELL_SIZE + GAP));
+                const yPos = baseY + (l * (CELL_SIZE + GAP));
+                desenharFormaCelula(ctx, xPos, yPos, estado);
+            }
+        }
+    });
 }
 
 // ==========================================
@@ -156,7 +204,22 @@ function processarTexto(textoOriginal) {
             }
             blocoAtual.hasCenter = true; blocoAtual.cCenter++;
             const coords = mapConsoantes[char];
-            if (coords) blocoAtual.grid[coords[0]][coords[1]] = Math.min(blocoAtual.cCenter, 4);
+            if (coords) {
+                blocoAtual.grid[coords[0]][coords[1]] = Math.min(blocoAtual.cCenter, 4);
+            } else {
+                // S/Z só marca [0,2] se já existir consoante real anterior no bloco
+                let hasPrevious = false;
+                for (let l = 1; l <= 3; l++) {
+                    for (let c = 1; c <= 3; c++) {
+                        if (blocoAtual.grid[l][c] > 0) { hasPrevious = true; break; }
+                    }
+                    if (hasPrevious) break;
+                }
+                if (hasPrevious) {
+                    blocoAtual.grid[0][2] = Math.min(blocoAtual.cCenter, 4);
+                }
+                // Se for a primeira/única consoante null → centro fica vazio (comportamento antigo)
+            }
         }
     }
     // Só adiciona o último bloco se ele tiver conteúdo real
@@ -167,40 +230,7 @@ function processarTexto(textoOriginal) {
 }
 
 function renderizarModoTexto(blocos) {
-    const parent = canvasText.parentElement;
-    const available = Math.max(280, parent.clientWidth - 24);
-
-    const blocksPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
-    const numRows = Math.ceil(Math.max(1, blocos.length) / blocksPerRow);
-
-    const canvasW = Math.min(available, blocksPerRow * ADVANCE_X + 16);
-    if (canvasText.width !== canvasW) canvasText.width = canvasW;
-
-    const blockContentH = 5 * CELL_SIZE + 4 * GAP;
-    const rowH = blockContentH + BLOCK_ROW_GAP;
-    const neededH = Y_OFFSET_START + numRows * rowH + 4;
-    if (canvasText.height !== neededH) canvasText.height = neededH;
-
-    ctxText.clearRect(0, 0, canvasText.width, canvasText.height);
-
-    blocos.forEach((bloco, i) => {
-        const row = Math.floor(i / blocksPerRow);
-        const col = i % blocksPerRow;
-
-        const xOffset = 10 + col * ADVANCE_X;
-        const baseY = Y_OFFSET_START + row * rowH;
-
-        desenharEstruturaCentro(ctxText, xOffset, baseY);
-
-        for (let l = 0; l < 5; l++) {
-            for (let c = 0; c < 5; c++) {
-                const estado = bloco.grid[l][c];
-                const xPos = xOffset + (c * (CELL_SIZE + GAP));
-                const yPos = baseY + (l * (CELL_SIZE + GAP));
-                desenharFormaCelula(ctxText, xPos, yPos, estado);
-            }
-        }
-    });
+    renderizarBlocosEmCanvas(canvasText, ctxText, blocos);
 }
 
 input.addEventListener('input', (e) => renderizarModoTexto(processarTexto(e.target.value)));
@@ -243,6 +273,10 @@ function descodificarBloco(grid) {
                 else if (c === 4) right.push({ char: reverseVogais[l], state: estado });
                 else if (l >= 1 && l <= 3 && c >= 1 && c <= 3) {
                     center.push({ char: reverseConsoantes[`${l},${c}`], state: estado });
+                    hasConsoanteCentro = true;
+                } else if (l === 0 && c === 2) {
+                    // Marcador de S/Z (null consonant) na célula [0,2]
+                    center.push({ char: 'S', state: estado });
                     hasConsoanteCentro = true;
                 }
             }
@@ -380,7 +414,10 @@ function lidarComCliqueGrid(e) {
                     let seccao = null;
                     if (coluna === 0) seccao = "esquerda";
                     else if (coluna === 4) seccao = "direita";
-                    else if (coluna >= 1 && coluna <= 3 && linha >= 1 && linha <= 3) seccao = "centro";
+                    else if (
+                        (coluna >= 1 && coluna <= 3 && linha >= 1 && linha <= 3) ||
+                        (coluna === 2 && linha === 0)
+                    ) seccao = "centro";
 
                     if (seccao !== null) {
                         let celulasAtivasNaSeccao = 0;
@@ -396,6 +433,8 @@ function lidarComCliqueGrid(e) {
                                     if (blocosManuais[b][l][c] > 0) celulasAtivasNaSeccao++;
                                 }
                             }
+                            // Contar também o marcador de S/Z na célula [0,2]
+                            if (blocosManuais[b][0][2] > 0) celulasAtivasNaSeccao++;
                         }
 
                         // Define o estado (1-4). Se já houver 4 ativas, a 5ª recebe estado 4 por defeito.
@@ -410,9 +449,43 @@ function lidarComCliqueGrid(e) {
     }
 }
 
-// Redimensionamento dinâmico para mobile / mais blocos por linha
+function iniciarNovaRodadaJogo() {
+    const idx = Math.floor(Math.random() * PALAVRAS_JOGO.length);
+    palavraAtualJogo = PALAVRAS_JOGO[idx];
+    blocosJogo = processarTexto(palavraAtualJogo);
+    inputGame.value = "";
+    feedbackGame.innerHTML = "";
+    feedbackGame.style.color = "";
+    renderizarJogo();
+    inputGame.focus();
+}
+
+function renderizarJogo() {
+    renderizarBlocosEmCanvas(canvasGame, ctxGame, blocosJogo);
+}
+
+function verificarResposta() {
+    const tentativa = inputGame.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+    if (!palavraAtualJogo) return;
+    if (tentativa === palavraAtualJogo) {
+        feedbackGame.innerHTML = "\u2713 Certo!";
+        feedbackGame.style.color = "#4ade80";
+    } else if (tentativa.length > 0) {
+        feedbackGame.innerHTML = "\u2717 Tenta outra vez";
+        feedbackGame.style.color = "#f87171";
+    } else {
+        feedbackGame.innerHTML = "";
+    }
+}
+
+inputGame.addEventListener('input', verificarResposta);
+btnNovaPalavra.addEventListener('click', () => {
+    iniciarNovaRodadaJogo();
+});
+
 window.addEventListener('resize', () => {
   updateGridSizes();
   renderizarModoTexto(processarTexto(input.value));
   renderizarModoManual();
+  if (tabGame.classList.contains('active')) renderizarJogo();
 });
