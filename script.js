@@ -60,6 +60,7 @@ const ctxGame = canvasGame.getContext('2d');
 const inputGame = document.getElementById('gameInput');
 const feedbackGame = document.getElementById('feedbackGame');
 const btnNovaPalavra = document.getElementById('btnNovaPalavra');
+const btnMostrarResposta = document.getElementById('btnMostrarResposta');
 
 btnTabText.addEventListener('click', () => {
     btnTabText.classList.add('active'); btnTabDraw.classList.remove('active'); btnTabGame.classList.remove('active');
@@ -427,7 +428,7 @@ function lidarComCliqueGrid(e) {
 
 function iniciarNovaRodadaJogo() {
     const idx = Math.floor(Math.random() * PALAVRAS_JOGO.length);
-    palavraAtualJogo = PALAVRAS_JOGO[idx];
+    palavraAtualJogo = PALAVRAS_JOGO[idx].normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
     blocosJogo = processarTexto(palavraAtualJogo);
     inputGame.value = "";
     feedbackGame.innerHTML = "";
@@ -458,6 +459,15 @@ inputGame.addEventListener('input', verificarResposta);
 btnNovaPalavra.addEventListener('click', () => {
     iniciarNovaRodadaJogo();
 });
+
+if (btnMostrarResposta) {
+    btnMostrarResposta.addEventListener('click', () => {
+        if (palavraAtualJogo) {
+            inputGame.value = palavraAtualJogo;
+            verificarResposta();
+        }
+    });
+}
 
 window.addEventListener('resize', () => {
   updateGridSizes();

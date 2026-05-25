@@ -180,9 +180,16 @@ canvas {
   text-align: center;
 }
 
-#btnNovaPalavra {
+#btnNovaPalavra, #btnMostrarResposta {
   width: auto;
   padding: 8px 16px;
   font-size: 0.95rem;
+  margin-top: 0;
+}
+
+.game-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
   margin-top: 4px;
 }
