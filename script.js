@@ -10,6 +10,18 @@ let BLOCK_WIDTH;
 let ADVANCE_X;
 let BLOCK_ROW_GAP = 20;
 
+let cfgPageBg = '#1a1a1a';
+let cfgBoxBg = '#222222';
+let cfgCellFill = '#ffffff';
+let cfgCellEmpty = '#2a2a2a';
+let cfgCornerRadius = 0;
+let cfgCellSizeOverride = null;
+let cfgGapOverride = null;
+let cfgBlockMarginOverride = null;
+let cfgBlockRowGapOverride = null;
+let cfgBlocksPerRow = 0;
+const dirtySettings = new Set();
+
 function updateGridSizes() {
   const w = window.innerWidth;
 
@@ -61,18 +73,6 @@ updateGridSizes();
 // ==========================================
 // PERSONALIZAÇÃO: PAINEL DE CONTROLO
 // ==========================================
-let cfgPageBg = '#1a1a1a';
-let cfgBoxBg = '#222222';
-let cfgCellFill = '#ffffff';
-let cfgCellEmpty = '#2a2a2a';
-let cfgCornerRadius = 0;
-let cfgCellSizeOverride = null;
-let cfgGapOverride = null;
-let cfgBlockMarginOverride = null;
-let cfgBlockRowGapOverride = null;
-let cfgBlocksPerRow = 0;
-
-const dirtySettings = new Set();
 
 const btnSettingsToggle = document.getElementById('btnSettingsToggle');
 const settingsPanel = document.getElementById('settingsPanel');
