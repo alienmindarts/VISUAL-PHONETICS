@@ -358,6 +358,8 @@ const canvasGame = document.getElementById('canvasGame');
 const ctxGame = canvasGame.getContext('2d');
 const inputGame = document.getElementById('gameInput');
 const feedbackGame = document.getElementById('feedbackGame');
+const progressBar = document.getElementById('progressBar');
+const progressLabel = document.getElementById('progressLabel');
 const btnNovaPalavra = document.getElementById('btnNovaPalavra');
 const btnMostrarResposta = document.getElementById('btnMostrarResposta');
 
@@ -862,6 +864,7 @@ function iniciarNovaRodadaJogo() {
     inputGame.value = "";
     feedbackGame.innerHTML = "";
     feedbackGame.style.color = "";
+    atualizarProgresso(0);
     renderizarJogo();
     inputGame.focus();
 }
@@ -870,17 +873,59 @@ function renderizarJogo() {
     renderizarBlocosEmCanvas(canvasGame, ctxGame, blocosJogo);
 }
 
+function calcularSimilaridadeFonetica(alvo, tentativa) {
+    const blocosAlvo = processarTexto(alvo);
+    const blocosTentativa = processarTexto(tentativa);
+    const maxLen = Math.max(blocosAlvo.length, blocosTentativa.length);
+
+    let totalAlvo = 0;
+    let match = 0;
+
+    for (let b = 0; b < maxLen; b++) {
+        const gA = (b < blocosAlvo.length) ? blocosAlvo[b].grid : criarMatrizVazia();
+        const gT = (b < blocosTentativa.length) ? blocosTentativa[b].grid : criarMatrizVazia();
+        for (let l = 0; l < 5; l++) {
+            for (let c = 0; c < 5; c++) {
+                if (gA[l][c] > 0) totalAlvo++;
+                if (gA[l][c] > 0 && gT[l][c] > 0) match++;
+            }
+        }
+    }
+
+    if (totalAlvo === 0) return 0;
+    return Math.round((match / totalAlvo) * 100);
+}
+
+function atualizarProgresso(percent) {
+    progressBar.style.width = percent + '%';
+    const hue = Math.min(120, (percent / 100) * 120);
+    progressBar.style.background = `hsl(${hue}, 70%, 50%)`;
+    progressLabel.textContent = percent > 0 ? percent + '% de correspondência fonética' : '';
+}
+
 function verificarResposta() {
     const tentativa = inputGame.value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
     if (!palavraAtualJogo) return;
     if (tentativa === palavraAtualJogo) {
         feedbackGame.innerHTML = "\u2713 Certo!";
         feedbackGame.style.color = "#4ade80";
+        atualizarProgresso(100);
     } else if (tentativa.length > 0) {
-        feedbackGame.innerHTML = "\u2717 Tenta outra vez";
-        feedbackGame.style.color = "#f87171";
+        const pct = calcularSimilaridadeFonetica(palavraAtualJogo, tentativa);
+        atualizarProgresso(pct);
+        if (pct >= 80) {
+            feedbackGame.innerHTML = "\u2248 Muito perto!";
+            feedbackGame.style.color = "#fbbf24";
+        } else if (pct >= 50) {
+            feedbackGame.innerHTML = "\u2248 Vai no bom caminho";
+            feedbackGame.style.color = "#fbbf24";
+        } else {
+            feedbackGame.innerHTML = "\u2717 Tenta outra vez";
+            feedbackGame.style.color = "#f87171";
+        }
     } else {
         feedbackGame.innerHTML = "";
+        atualizarProgresso(0);
     }
 }
 
