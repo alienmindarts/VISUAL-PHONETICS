@@ -21,7 +21,7 @@ let cfgBlockMarginOverride = null;
 let cfgBlockRowGapOverride = null;
 let cfgBlocksPerRow = 0;
 let cfgShowGuide = true;
-let cfgGuideColor = 'rgba(255, 255, 255, 0.15)';
+let cfgGuideColor = '#555555';
 const dirtySettings = new Set();
 
 function updateGridSizes() {
@@ -249,32 +249,41 @@ function exportarSVG(blocos, modo) {
         const baseY = SVG_PAD_TOP + row * rowH;
         const grid = bloco.grid || bloco;
 
+        for (let l = 0; l < 5; l++) {
+            for (let c = 0; c < 5; c++) {
+                if (grid[l][c] === 0 && blankFill !== 'none') {
+                    const xPos = xOffset + (c * (CELL_SIZE + GAP));
+                    const yPos = baseY + (l * (CELL_SIZE + GAP));
+                    const rx = cfgCornerRadius;
+                    svgParts.push(`<rect x="${xPos}" y="${yPos}" width="${CELL_SIZE}" height="${CELL_SIZE}" rx="${rx}" fill="${blankFill}"/>`);
+                }
+            }
+        }
+
         if (cfgShowGuide) {
-            const gx = xOffset + (CELL_SIZE + GAP) - (GAP / 2);
-            const gy = baseY + (CELL_SIZE + GAP) - (GAP / 2);
-            const gs = 3 * CELL_SIZE + 3 * GAP;
+            const gx = xOffset + (CELL_SIZE + GAP) + 0.5;
+            const gy = baseY + (CELL_SIZE + GAP) + 0.5;
+            const gs = 3 * CELL_SIZE + 2 * GAP - 1;
             svgParts.push(`<rect x="${gx}" y="${gy}" width="${gs}" height="${gs}" fill="none" stroke="${cfgGuideColor}" stroke-width="1"/>`);
         }
 
         for (let l = 0; l < 5; l++) {
             for (let c = 0; c < 5; c++) {
                 const estado = grid[l][c];
+                if (estado === 0) continue;
                 const xPos = xOffset + (c * (CELL_SIZE + GAP));
                 const yPos = baseY + (l * (CELL_SIZE + GAP));
                 const rx = cfgCornerRadius;
                 const cx = xPos + CELL_SIZE / 2;
                 const cy = yPos + CELL_SIZE / 2;
 
-                if (estado === 0) {
-                    if (blankFill !== 'none') {
-                        svgParts.push(`<rect x="${xPos}" y="${yPos}" width="${CELL_SIZE}" height="${CELL_SIZE}" rx="${rx}" fill="${blankFill}"/>`);
-                    }
-                } else if (estado === 1 || estado === 4) {
+                if (estado === 1 || estado === 4) {
                     svgParts.push(`<rect x="${xPos}" y="${yPos}" width="${CELL_SIZE}" height="${CELL_SIZE}" rx="${rx}" fill="${cfgCellFill}"/>`);
                     if (estado === 4) {
-                        svgParts.push(`<circle cx="${cx}" cy="${cy}" r="3.5" fill="${blankFill === 'none' ? cfgBoxBg : blankFill}" stroke="#000" stroke-width="1.5"/>`);
+                        svgParts.push(`<circle cx="${cx}" cy="${cy}" r="3.5" fill="${blankFill === 'none' ? cfgBoxBg : blankFill}" stroke="${blankFill}" stroke-width="1.5"/>`);
                     }
                 } else if (estado === 2 || estado === 3) {
+                    svgParts.push(`<rect x="${xPos}" y="${yPos}" width="${CELL_SIZE}" height="${CELL_SIZE}" rx="${rx}" fill="${blankFill}"/>`);
                     svgParts.push(`<rect x="${xPos}" y="${yPos}" width="${CELL_SIZE}" height="${CELL_SIZE}" rx="${rx}" fill="none" stroke="${cfgCellFill}" stroke-width="2"/>`);
                     if (estado === 3) {
                         svgParts.push(`<circle cx="${cx}" cy="${cy}" r="3.5" fill="${cfgCellFill}"/>`);
@@ -388,8 +397,14 @@ function desenharFormaCelula(ctx, x, y, estado) {
         if (r > 0) { ctx.beginPath(); ctx.roundRect(x, y, CELL_SIZE, CELL_SIZE, r); ctx.fill(); }
         else { ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE); }
     } else if (estado === 2 || estado === 3) {
-        if (r > 0) { ctx.beginPath(); ctx.roundRect(x, y, CELL_SIZE, CELL_SIZE, r); ctx.stroke(); }
-        else { ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE); }
+        const emptyFill = (cfgCellEmpty && cfgCellEmpty !== 'transparent') ? cfgCellEmpty : cfgBoxBg;
+        ctx.fillStyle = emptyFill;
+        if (r > 0) { ctx.beginPath(); ctx.roundRect(x, y, CELL_SIZE, CELL_SIZE, r); ctx.fill(); }
+        else { ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE); }
+        ctx.fillStyle = cfgCellFill;
+        const inset = ctx.lineWidth / 2;
+        if (r > 0) { ctx.beginPath(); ctx.roundRect(x + inset, y + inset, CELL_SIZE - ctx.lineWidth, CELL_SIZE - ctx.lineWidth, r); ctx.stroke(); }
+        else { ctx.strokeRect(x + inset, y + inset, CELL_SIZE - ctx.lineWidth, CELL_SIZE - ctx.lineWidth); }
     }
 
     if (estado === 3) {
@@ -399,7 +414,8 @@ function desenharFormaCelula(ctx, x, y, estado) {
     }
 
     if (estado === 4) {
-        ctx.strokeStyle = '#000000';
+        const emptyFill = (cfgCellEmpty && cfgCellEmpty !== 'transparent') ? cfgCellEmpty : cfgBoxBg;
+        ctx.strokeStyle = emptyFill;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 3.5, 0, Math.PI * 2);
@@ -413,10 +429,11 @@ function desenharEstruturaCentro(ctx, xOffset, baseY = Y_OFFSET_START) {
     if (!cfgShowGuide) return;
     ctx.strokeStyle = cfgGuideColor;
     ctx.lineWidth = 1;
-    const startX = xOffset + 1 * (CELL_SIZE + GAP) - (GAP / 2);
-    const startY = baseY + 1 * (CELL_SIZE + GAP) - (GAP / 2);
-    const size = (3 * CELL_SIZE) + (3 * GAP);
-    ctx.strokeRect(startX, startY, size, size);
+    const startX = xOffset + 1 * (CELL_SIZE + GAP);
+    const startY = baseY + 1 * (CELL_SIZE + GAP);
+    const size = (3 * CELL_SIZE) + (2 * GAP);
+    const hw = ctx.lineWidth / 2;
+    ctx.strokeRect(startX + hw, startY + hw, size - ctx.lineWidth, size - ctx.lineWidth);
 }
 
 function renderizarBlocosEmCanvas(canvas, ctx, blocos, labels = null) {
@@ -438,13 +455,24 @@ function renderizarBlocosEmCanvas(canvas, ctx, blocos, labels = null) {
         const col = i % blocksPerRow;
         const xOffset = 10 + col * ADVANCE_X;
         const baseY = Y_OFFSET_START + row * rowH;
+        for (let l = 0; l < 5; l++) {
+            for (let c = 0; c < 5; c++) {
+                if (bloco.grid[l][c] === 0) {
+                    const xPos = xOffset + (c * (CELL_SIZE + GAP));
+                    const yPos = baseY + (l * (CELL_SIZE + GAP));
+                    desenharFormaCelula(ctx, xPos, yPos, 0);
+                }
+            }
+        }
         desenharEstruturaCentro(ctx, xOffset, baseY);
         for (let l = 0; l < 5; l++) {
             for (let c = 0; c < 5; c++) {
                 const estado = bloco.grid[l][c];
-                const xPos = xOffset + (c * (CELL_SIZE + GAP));
-                const yPos = baseY + (l * (CELL_SIZE + GAP));
-                desenharFormaCelula(ctx, xPos, yPos, estado);
+                if (estado > 0) {
+                    const xPos = xOffset + (c * (CELL_SIZE + GAP));
+                    const yPos = baseY + (l * (CELL_SIZE + GAP));
+                    desenharFormaCelula(ctx, xPos, yPos, estado);
+                }
             }
         }
         if (labels && labels[i]) {
@@ -695,8 +723,6 @@ function renderizarModoManual() {
         const xOffset = 10 + col * ADVANCE_X;
         const baseY = Y_OFFSET_START + row * (blockContentH + BLOCK_ROW_GAP);
 
-        desenharEstruturaCentro(ctxDraw, xOffset, baseY);
-
         for (let l = 0; l < 5; l++) {
             for (let c = 0; c < 5; c++) {
                 const xPos = xOffset + (c * (CELL_SIZE + GAP));
@@ -706,8 +732,20 @@ function renderizarModoManual() {
                 ctxDraw.lineWidth = 1;
                 ctxDraw.strokeRect(xPos, yPos, CELL_SIZE, CELL_SIZE);
 
+                if (grid[l][c] === 0) {
+                    desenharFormaCelula(ctxDraw, xPos, yPos, 0);
+                }
+            }
+        }
+        desenharEstruturaCentro(ctxDraw, xOffset, baseY);
+        for (let l = 0; l < 5; l++) {
+            for (let c = 0; c < 5; c++) {
                 const estado = grid[l][c];
-                desenharFormaCelula(ctxDraw, xPos, yPos, estado);
+                if (estado > 0) {
+                    const xPos = xOffset + (c * (CELL_SIZE + GAP));
+                    const yPos = baseY + (l * (CELL_SIZE + GAP));
+                    desenharFormaCelula(ctxDraw, xPos, yPos, estado);
+                }
             }
         }
 
