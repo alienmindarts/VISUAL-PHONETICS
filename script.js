@@ -174,8 +174,31 @@ const mapConsoantes = {
 
 function criarMatrizVazia() { return Array(5).fill(0).map(() => Array(5).fill(0)); }
 
+function preProcessarTexto(texto) {
+    let resultado = texto
+        .replace(/[çÇ]/g, 'S')
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    resultado = resultado.replaceAll('CH', 'X');
+    resultado = resultado.replaceAll('LH', 'L');
+    resultado = resultado.replaceAll('NH', 'N');
+    resultado = resultado.replaceAll('RR', 'R');
+
+    resultado = resultado.replaceAll('Y', 'I');
+    resultado = resultado.replaceAll('U', 'O');
+
+    resultado = resultado.replaceAll('CE', 'SE');
+    resultado = resultado.replaceAll('CI', 'SI');
+    resultado = resultado.replaceAll('GE', 'JE');
+    resultado = resultado.replaceAll('GI', 'JI');
+
+    return resultado;
+}
+
 function processarTexto(textoOriginal) {
-    const texto = textoOriginal.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    const texto = preProcessarTexto(textoOriginal);
     const blocos = [];
     let blocoAtual = { grid: criarMatrizVazia(), hasCenter: false, hasRight: false, cLeft: 0, cCenter: 0, cRight: 0 };
 
