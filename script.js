@@ -316,7 +316,6 @@ function preProcessarTexto(texto) {
     resultado = resultado.replaceAll('RR', 'R');
 
     resultado = resultado.replaceAll('Y', 'I');
-    resultado = resultado.replaceAll('U', 'O');
 
     resultado = resultado.replaceAll('CE', 'SE');
     resultado = resultado.replaceAll('CI', 'SI');
