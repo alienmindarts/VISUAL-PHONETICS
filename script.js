@@ -162,6 +162,173 @@ document.querySelectorAll('.canvas-container, .canvas-scroll-area').forEach(el =
     el.style.backgroundColor = cfgBoxBg;
 });
 
+// ==========================================
+// EXPORTAÇÃO DE BLOCOS
+// ==========================================
+const btnExport = document.getElementById('btnExport');
+const exportMenu = document.getElementById('exportMenu');
+
+function getActiveCanvasAndBlocks() {
+    if (tabText.classList.contains('active')) {
+        return { canvas: canvasText, blocos: processarTexto(input.value), modo: 'texto' };
+    }
+    if (tabDraw.classList.contains('active')) {
+        return { canvas: canvasDraw, blocos: blocosManuais, modo: 'desenho' };
+    }
+    if (tabGame.classList.contains('active') && blocosJogo.length > 0) {
+        return { canvas: canvasGame, blocos: blocosJogo, modo: 'jogo' };
+    }
+    return null;
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function gerarNomeFicheiro(ctx) {
+    if (ctx.modo === 'texto') {
+        const texto = input.value.trim();
+        return texto || 'blocos';
+    }
+    if (ctx.modo === 'desenho') {
+        const partes = blocosManuais.map(g => descodificarBloco(g)).filter(Boolean);
+        return partes.length > 0 ? partes.join('_') : 'blocos';
+    }
+    if (ctx.modo === 'jogo') {
+        return palavraAtualJogo || 'blocos';
+    }
+    return 'blocos';
+}
+
+function exportarRaster(format) {
+    const ctx = getActiveCanvasAndBlocks();
+    if (!ctx) return;
+    const mimeMap = { png: 'image/png', jpeg: 'image/jpeg', webp: 'image/webp' };
+    const mime = mimeMap[format];
+    if (!mime) return;
+    const quality = (format === 'jpeg' || format === 'webp') ? 0.92 : undefined;
+    ctx.canvas.toBlob(blob => {
+        if (blob) downloadBlob(blob, `${gerarNomeFicheiro(ctx)}.${format}`);
+    }, mime, quality);
+}
+
+function exportarSVG(blocos, modo) {
+    if (!blocos || blocos.length === 0) return;
+
+    const blocksPerRow = cfgBlocksPerRow > 0 ? cfgBlocksPerRow : Math.max(1, Math.floor(800 / ADVANCE_X));
+    const numRows = Math.ceil(blocos.length / blocksPerRow);
+    const blockContentH = 5 * CELL_SIZE + 4 * GAP;
+    const extraForLabel = (modo === 'desenho' && toggleTraducao.checked) ? 18 : 0;
+    const rowH = blockContentH + BLOCK_ROW_GAP + extraForLabel;
+
+    const SVG_PAD_LEFT = 10;
+    const SVG_PAD_TOP = Y_OFFSET_START;
+    const SVG_PAD_RIGHT = 6;
+    const SVG_PAD_BOTTOM = 4;
+
+    const totalW = SVG_PAD_LEFT + blocksPerRow * ADVANCE_X + SVG_PAD_RIGHT;
+    const totalH = SVG_PAD_TOP + numRows * rowH + SVG_PAD_BOTTOM;
+
+    let svgParts = [];
+    svgParts.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}">`);
+    svgParts.push(`<rect width="100%" height="100%" fill="${cfgBoxBg}" rx="8"/>`);
+
+    const blankFill = (cfgCellEmpty && cfgCellEmpty !== 'transparent') ? cfgCellEmpty : 'none';
+
+    blocos.forEach((bloco, i) => {
+        const row = Math.floor(i / blocksPerRow);
+        const col = i % blocksPerRow;
+        const xOffset = SVG_PAD_LEFT + col * ADVANCE_X;
+        const baseY = SVG_PAD_TOP + row * rowH;
+        const grid = bloco.grid || bloco;
+
+        if (cfgShowGuide) {
+            const gx = xOffset + (CELL_SIZE + GAP) - (GAP / 2);
+            const gy = baseY + (CELL_SIZE + GAP) - (GAP / 2);
+            const gs = 3 * CELL_SIZE + 3 * GAP;
+            svgParts.push(`<rect x="${gx}" y="${gy}" width="${gs}" height="${gs}" fill="none" stroke="${cfgGuideColor}" stroke-width="1"/>`);
+        }
+
+        for (let l = 0; l < 5; l++) {
+            for (let c = 0; c < 5; c++) {
+                const estado = grid[l][c];
+                const xPos = xOffset + (c * (CELL_SIZE + GAP));
+                const yPos = baseY + (l * (CELL_SIZE + GAP));
+                const rx = cfgCornerRadius;
+                const cx = xPos + CELL_SIZE / 2;
+                const cy = yPos + CELL_SIZE / 2;
+
+                if (estado === 0) {
+                    if (blankFill !== 'none') {
+                        svgParts.push(`<rect x="${xPos}" y="${yPos}" width="${CELL_SIZE}" height="${CELL_SIZE}" rx="${rx}" fill="${blankFill}"/>`);
+                    }
+                } else if (estado === 1 || estado === 4) {
+                    svgParts.push(`<rect x="${xPos}" y="${yPos}" width="${CELL_SIZE}" height="${CELL_SIZE}" rx="${rx}" fill="${cfgCellFill}"/>`);
+                    if (estado === 4) {
+                        svgParts.push(`<circle cx="${cx}" cy="${cy}" r="3.5" fill="${blankFill === 'none' ? cfgBoxBg : blankFill}" stroke="#000" stroke-width="1.5"/>`);
+                    }
+                } else if (estado === 2 || estado === 3) {
+                    svgParts.push(`<rect x="${xPos}" y="${yPos}" width="${CELL_SIZE}" height="${CELL_SIZE}" rx="${rx}" fill="none" stroke="${cfgCellFill}" stroke-width="2"/>`);
+                    if (estado === 3) {
+                        svgParts.push(`<circle cx="${cx}" cy="${cy}" r="3.5" fill="${cfgCellFill}"/>`);
+                    }
+                }
+            }
+        }
+
+        if (modo === 'desenho' && toggleTraducao.checked) {
+            const texto = descodificarBloco(grid);
+            if (texto) {
+                const labelY = baseY + blockContentH + 14;
+                const labelSize = Math.max(11, Math.min(15, Math.floor(CELL_SIZE * 0.8)));
+                svgParts.push(`<text x="${xOffset + BLOCK_WIDTH / 2}" y="${labelY}" fill="#888" font-family="monospace" font-size="${labelSize}" text-anchor="middle">${texto}</text>`);
+            }
+        }
+    });
+
+    svgParts.push('</svg>');
+    const svgStr = svgParts.join('\n');
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const ctxAux = getActiveCanvasAndBlocks();
+    downloadBlob(blob, `${ctxAux ? gerarNomeFicheiro(ctxAux) : 'blocos'}.svg`);
+}
+
+btnExport.addEventListener('click', (e) => {
+    e.stopPropagation();
+    exportMenu.classList.toggle('hidden');
+    btnExport.classList.toggle('active', !exportMenu.classList.contains('hidden'));
+});
+
+exportMenu.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const format = btn.dataset.format;
+        exportMenu.classList.add('hidden');
+        btnExport.classList.remove('active');
+
+        if (format === 'svg') {
+            const ctx = getActiveCanvasAndBlocks();
+            if (ctx) exportarSVG(ctx.blocos, ctx.modo);
+        } else {
+            exportarRaster(format);
+        }
+    });
+});
+
+document.addEventListener('click', () => {
+    if (!exportMenu.classList.contains('hidden')) {
+        exportMenu.classList.add('hidden');
+        btnExport.classList.remove('active');
+    }
+});
+
 const btnTabText = document.getElementById('btnTabText');
 const btnTabDraw = document.getElementById('btnTabDraw');
 const tabText = document.getElementById('tabText');
