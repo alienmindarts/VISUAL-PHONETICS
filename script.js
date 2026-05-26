@@ -20,6 +20,8 @@ let cfgGapOverride = null;
 let cfgBlockMarginOverride = null;
 let cfgBlockRowGapOverride = null;
 let cfgBlocksPerRow = 0;
+let cfgShowGuide = true;
+let cfgGuideColor = 'rgba(255, 255, 255, 0.15)';
 const dirtySettings = new Set();
 
 function updateGridSizes() {
@@ -88,6 +90,8 @@ function readPanelValues() {
     cfgBlockMarginOverride = dirtySettings.has('cfgBlockMargin') ? parseInt(document.getElementById('cfgBlockMargin').value) : null;
     cfgBlockRowGapOverride = dirtySettings.has('cfgBlockRowGap') ? parseInt(document.getElementById('cfgBlockRowGap').value) : null;
     cfgBlocksPerRow = parseInt(document.getElementById('cfgBlocksPerRow').value);
+    cfgShowGuide = document.getElementById('cfgShowGuide').checked;
+    cfgGuideColor = document.getElementById('cfgGuideColor').value;
 }
 
 function updateSizeOverrides() {
@@ -150,6 +154,8 @@ document.getElementById('cfgGap').value = GAP;
 document.getElementById('cfgBlockMargin').value = BLOCK_MARGIN;
 document.getElementById('cfgBlockRowGap').value = BLOCK_ROW_GAP;
 document.getElementById('cfgBlocksPerRow').value = 0;
+document.getElementById('cfgShowGuide').checked = cfgShowGuide;
+document.getElementById('cfgGuideColor').value = cfgGuideColor;
 updateSliderLabels();
 document.body.style.backgroundColor = cfgPageBg;
 document.querySelectorAll('.canvas-container, .canvas-scroll-area').forEach(el => {
@@ -231,7 +237,8 @@ function desenharFormaCelula(ctx, x, y, estado) {
 }
 
 function desenharEstruturaCentro(ctx, xOffset, baseY = Y_OFFSET_START) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; 
+    if (!cfgShowGuide) return;
+    ctx.strokeStyle = cfgGuideColor;
     ctx.lineWidth = 1;
     const startX = xOffset + 1 * (CELL_SIZE + GAP) - (GAP / 2);
     const startY = baseY + 1 * (CELL_SIZE + GAP) - (GAP / 2);
