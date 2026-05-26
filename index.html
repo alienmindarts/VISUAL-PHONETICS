@@ -16,6 +16,56 @@
             <button id="btnTabGame" class="tab-btn">Modo Jogo</button>
         </div>
 
+        <div class="toolbar-area">
+            <button id="btnSettingsToggle" class="settings-toggle" title="Personalização">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+            <div id="settingsPanel" class="settings-panel hidden">
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label>Fundo da página</label>
+                        <input type="color" id="cfgPageBg" value="#1a1a1a">
+                    </div>
+                    <div class="setting-item">
+                        <label>Caixa dos blocos</label>
+                        <input type="color" id="cfgBoxBg" value="#222222">
+                    </div>
+                    <div class="setting-item">
+                        <label>Células preenchidas</label>
+                        <input type="color" id="cfgCellFill" value="#ffffff">
+                    </div>
+                    <div class="setting-item">
+                        <label>Células vazias</label>
+                        <input type="color" id="cfgCellEmpty" value="#2a2a2a">
+                    </div>
+                    <div class="setting-item">
+                        <label>Arredondamento <span class="val-label" id="lblCornerRadius">0</span></label>
+                        <input type="range" id="cfgCornerRadius" min="0" max="10" value="0" step="1">
+                    </div>
+                    <div class="setting-item">
+                        <label>Tamanho blocos <span class="val-label" id="lblCellSize">20</span>px</label>
+                        <input type="range" id="cfgCellSize" min="10" max="40" value="20" step="1">
+                    </div>
+                    <div class="setting-item">
+                        <label>Blocos/linha <span class="val-label" id="lblBlocksPerRow">auto</span></label>
+                        <input type="range" id="cfgBlocksPerRow" min="0" max="20" value="0" step="1">
+                    </div>
+                    <div class="setting-item">
+                        <label>Espaço blocos <span class="val-label" id="lblBlockMargin">22</span>px</label>
+                        <input type="range" id="cfgBlockMargin" min="4" max="60" value="22" step="1">
+                    </div>
+                    <div class="setting-item">
+                        <label>Margem células <span class="val-label" id="lblGap">3</span>px</label>
+                        <input type="range" id="cfgGap" min="1" max="10" value="3" step="1">
+                    </div>
+                    <div class="setting-item">
+                        <label>Quebra linhas <span class="val-label" id="lblBlockRowGap">20</span>px</label>
+                        <input type="range" id="cfgBlockRowGap" min="4" max="60" value="20" step="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="tabText" class="tab-content active">
             <input type="text" id="textInput" placeholder="Escreve uma palavra..." autocomplete="off">
 

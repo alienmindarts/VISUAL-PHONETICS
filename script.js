@@ -13,37 +13,148 @@ let BLOCK_ROW_GAP = 20;
 function updateGridSizes() {
   const w = window.innerWidth;
 
+  let baseCellSize, baseGap, baseMargin, baseYOffset, baseRowGap;
   if (w < 480) {
-    CELL_SIZE = 15;
-    GAP = 2;
-    BLOCK_MARGIN = 10;
-    Y_OFFSET_START = 6;
+    baseCellSize = 15; baseGap = 2; baseMargin = 10; baseYOffset = 6; baseRowGap = 14;
   } else if (w < 700) {
-    CELL_SIZE = 17;
-    GAP = 2;
-    BLOCK_MARGIN = 14;
-    Y_OFFSET_START = 7;
+    baseCellSize = 17; baseGap = 2; baseMargin = 14; baseYOffset = 7; baseRowGap = 16;
   } else {
-    CELL_SIZE = 20;
-    GAP = 3;
-    BLOCK_MARGIN = 22;
-    Y_OFFSET_START = 8;
+    baseCellSize = 20; baseGap = 3; baseMargin = 22; baseYOffset = 8; baseRowGap = 20;
   }
+
+  CELL_SIZE = cfgCellSizeOverride !== null ? cfgCellSizeOverride : baseCellSize;
+  GAP = cfgGapOverride !== null ? cfgGapOverride : baseGap;
+  BLOCK_MARGIN = cfgBlockMarginOverride !== null ? cfgBlockMarginOverride : baseMargin;
+  BLOCK_ROW_GAP = cfgBlockRowGapOverride !== null ? cfgBlockRowGapOverride : baseRowGap;
+  Y_OFFSET_START = baseYOffset;
 
   BLOCK_WIDTH = (5 * CELL_SIZE) + (4 * GAP);
   ADVANCE_X = BLOCK_WIDTH + BLOCK_MARGIN;
 
-  // Espaçamento vertical entre linhas de blocos (mais apertado em mobile)
-  if (w < 480) {
-    BLOCK_ROW_GAP = 14;
-  } else if (w < 700) {
-    BLOCK_ROW_GAP = 16;
-  } else {
-    BLOCK_ROW_GAP = 20;
+  // Atualizar sliders não alterados manualmente
+  if (!dirtySettings.has('cfgCellSize')) {
+    const s = document.getElementById('cfgCellSize');
+    if (s) s.value = CELL_SIZE;
   }
+  if (!dirtySettings.has('cfgGap')) {
+    const s = document.getElementById('cfgGap');
+    if (s) s.value = GAP;
+  }
+  if (!dirtySettings.has('cfgBlockMargin')) {
+    const s = document.getElementById('cfgBlockMargin');
+    if (s) s.value = BLOCK_MARGIN;
+  }
+  if (!dirtySettings.has('cfgBlockRowGap')) {
+    const s = document.getElementById('cfgBlockRowGap');
+    if (s) s.value = BLOCK_ROW_GAP;
+  }
+  const cornerSlider = document.getElementById('cfgCornerRadius');
+  if (cornerSlider) {
+    cornerSlider.max = Math.floor(CELL_SIZE / 2);
+  }
+
+  updateSliderLabels();
 }
 
 updateGridSizes();
+
+// ==========================================
+// PERSONALIZAÇÃO: PAINEL DE CONTROLO
+// ==========================================
+let cfgPageBg = '#1a1a1a';
+let cfgBoxBg = '#222222';
+let cfgCellFill = '#ffffff';
+let cfgCellEmpty = '#2a2a2a';
+let cfgCornerRadius = 0;
+let cfgCellSizeOverride = null;
+let cfgGapOverride = null;
+let cfgBlockMarginOverride = null;
+let cfgBlockRowGapOverride = null;
+let cfgBlocksPerRow = 0;
+
+const dirtySettings = new Set();
+
+const btnSettingsToggle = document.getElementById('btnSettingsToggle');
+const settingsPanel = document.getElementById('settingsPanel');
+
+function readPanelValues() {
+    cfgPageBg = document.getElementById('cfgPageBg').value;
+    cfgBoxBg = document.getElementById('cfgBoxBg').value;
+    cfgCellFill = document.getElementById('cfgCellFill').value;
+    cfgCellEmpty = document.getElementById('cfgCellEmpty').value;
+    cfgCornerRadius = parseInt(document.getElementById('cfgCornerRadius').value);
+    cfgCellSizeOverride = dirtySettings.has('cfgCellSize') ? parseInt(document.getElementById('cfgCellSize').value) : null;
+    cfgGapOverride = dirtySettings.has('cfgGap') ? parseInt(document.getElementById('cfgGap').value) : null;
+    cfgBlockMarginOverride = dirtySettings.has('cfgBlockMargin') ? parseInt(document.getElementById('cfgBlockMargin').value) : null;
+    cfgBlockRowGapOverride = dirtySettings.has('cfgBlockRowGap') ? parseInt(document.getElementById('cfgBlockRowGap').value) : null;
+    cfgBlocksPerRow = parseInt(document.getElementById('cfgBlocksPerRow').value);
+}
+
+function updateSizeOverrides() {
+    if (cfgCellSizeOverride !== null) CELL_SIZE = cfgCellSizeOverride;
+    if (cfgGapOverride !== null) GAP = cfgGapOverride;
+    if (cfgBlockMarginOverride !== null) BLOCK_MARGIN = cfgBlockMarginOverride;
+    if (cfgBlockRowGapOverride !== null) BLOCK_ROW_GAP = cfgBlockRowGapOverride;
+    BLOCK_WIDTH = (5 * CELL_SIZE) + (4 * GAP);
+    ADVANCE_X = BLOCK_WIDTH + BLOCK_MARGIN;
+}
+
+function updateSliderLabels() {
+    document.getElementById('lblCornerRadius').textContent = cfgCornerRadius;
+    document.getElementById('lblCellSize').textContent = cfgCellSizeOverride !== null ? cfgCellSizeOverride : CELL_SIZE;
+    document.getElementById('lblBlocksPerRow').textContent = cfgBlocksPerRow === 0 ? 'auto' : cfgBlocksPerRow;
+    document.getElementById('lblBlockMargin').textContent = cfgBlockMarginOverride !== null ? cfgBlockMarginOverride : BLOCK_MARGIN;
+    document.getElementById('lblGap').textContent = cfgGapOverride !== null ? cfgGapOverride : GAP;
+    document.getElementById('lblBlockRowGap').textContent = cfgBlockRowGapOverride !== null ? cfgBlockRowGapOverride : BLOCK_ROW_GAP;
+}
+
+function applySettings() {
+    readPanelValues();
+    updateSizeOverrides();
+    updateSliderLabels();
+
+    document.body.style.backgroundColor = cfgPageBg;
+    document.querySelectorAll('.canvas-container, .canvas-scroll-area').forEach(el => {
+        el.style.backgroundColor = cfgBoxBg;
+    });
+
+    const cornerSlider = document.getElementById('cfgCornerRadius');
+    const maxR = Math.floor(CELL_SIZE / 2);
+    if (parseInt(cornerSlider.max) !== maxR) cornerSlider.max = maxR;
+
+    renderizarModoTexto(processarTexto(input.value));
+    renderizarModoManual();
+    if (tabGame && tabGame.classList.contains('active')) renderizarJogo();
+}
+
+btnSettingsToggle.addEventListener('click', () => {
+    const hidden = settingsPanel.classList.toggle('hidden');
+    btnSettingsToggle.classList.toggle('active', !hidden);
+});
+
+document.querySelectorAll('#settingsPanel input').forEach(el => {
+    el.addEventListener('input', () => {
+        dirtySettings.add(el.id);
+        applySettings();
+    });
+});
+
+// Inicializar painel com valores atuais
+document.getElementById('cfgCornerRadius').max = Math.floor(CELL_SIZE / 2);
+document.getElementById('cfgPageBg').value = cfgPageBg;
+document.getElementById('cfgBoxBg').value = cfgBoxBg;
+document.getElementById('cfgCellFill').value = cfgCellFill;
+document.getElementById('cfgCellEmpty').value = cfgCellEmpty;
+document.getElementById('cfgCellSize').value = CELL_SIZE;
+document.getElementById('cfgGap').value = GAP;
+document.getElementById('cfgBlockMargin').value = BLOCK_MARGIN;
+document.getElementById('cfgBlockRowGap').value = BLOCK_ROW_GAP;
+document.getElementById('cfgBlocksPerRow').value = 0;
+updateSliderLabels();
+document.body.style.backgroundColor = cfgPageBg;
+document.querySelectorAll('.canvas-container, .canvas-scroll-area').forEach(el => {
+    el.style.backgroundColor = cfgBoxBg;
+});
 
 const btnTabText = document.getElementById('btnTabText');
 const btnTabDraw = document.getElementById('btnTabDraw');
@@ -82,29 +193,39 @@ btnTabGame.addEventListener('click', () => {
 });
 
 function desenharFormaCelula(ctx, x, y, estado) {
-    if (estado === 0) return;
-    ctx.strokeStyle = '#ffffff'; ctx.fillStyle = '#ffffff'; ctx.lineWidth = 2;
-    
-    if (estado === 1 || estado === 4) { 
-        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE); 
-    } else if (estado === 2 || estado === 3) { 
-        ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE); 
+    const r = cfgCornerRadius;
+    ctx.strokeStyle = cfgCellFill; ctx.fillStyle = cfgCellFill; ctx.lineWidth = 2;
+
+    if (estado === 0) {
+        if (cfgCellEmpty && cfgCellEmpty !== 'transparent') {
+            ctx.fillStyle = cfgCellEmpty;
+            if (r > 0) { ctx.beginPath(); ctx.roundRect(x, y, CELL_SIZE, CELL_SIZE, r); ctx.fill(); }
+            else { ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE); }
+        }
+        return;
     }
-    
+
+    if (estado === 1 || estado === 4) {
+        if (r > 0) { ctx.beginPath(); ctx.roundRect(x, y, CELL_SIZE, CELL_SIZE, r); ctx.fill(); }
+        else { ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE); }
+    } else if (estado === 2 || estado === 3) {
+        if (r > 0) { ctx.beginPath(); ctx.roundRect(x, y, CELL_SIZE, CELL_SIZE, r); ctx.stroke(); }
+        else { ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE); }
+    }
+
     if (estado === 3) {
         ctx.beginPath();
         ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 3.5, 0, Math.PI * 2);
         ctx.fill();
     }
-    
+
     if (estado === 4) {
-        // Estado 4: célula preenchida + círculo vazio (stroke) ao centro
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(x + CELL_SIZE/2, y + CELL_SIZE/2, 3.5, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.strokeStyle = '#ffffff';
+        ctx.strokeStyle = cfgCellFill;
         ctx.lineWidth = 2;
     }
 }
@@ -121,7 +242,8 @@ function desenharEstruturaCentro(ctx, xOffset, baseY = Y_OFFSET_START) {
 function renderizarBlocosEmCanvas(canvas, ctx, blocos) {
     const parent = canvas.parentElement;
     const available = Math.max(280, parent.clientWidth - 24);
-    const blocksPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
+    const autoPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
+    const blocksPerRow = cfgBlocksPerRow > 0 ? cfgBlocksPerRow : autoPerRow;
     const numRows = Math.ceil(Math.max(1, blocos.length) / blocksPerRow);
     const canvasW = Math.min(available, blocksPerRow * ADVANCE_X + 16);
     if (canvas.width !== canvasW) canvas.width = canvasW;
@@ -305,7 +427,8 @@ function renderizarModoManual() {
     const parent = canvasDraw.parentElement;
     const available = Math.max(280, parent.clientWidth - 24);
 
-    const blocksPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
+    const autoPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
+    const blocksPerRow = cfgBlocksPerRow > 0 ? cfgBlocksPerRow : autoPerRow;
     const numRows = Math.ceil(Math.max(1, blocosManuais.length) / blocksPerRow);
 
     const canvasW = Math.min(available, blocksPerRow * ADVANCE_X + 16);
@@ -384,7 +507,8 @@ function lidarComCliqueGrid(e) {
 
     const parent = canvasDraw.parentElement;
     const available = Math.max(280, parent.clientWidth - 24);
-    const blocksPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
+    const autoPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
+    const blocksPerRow = cfgBlocksPerRow > 0 ? cfgBlocksPerRow : autoPerRow;
 
     const blockContentH = 5 * CELL_SIZE + 4 * GAP;
     const rowH = blockContentH + BLOCK_ROW_GAP;
