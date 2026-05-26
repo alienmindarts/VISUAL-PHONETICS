@@ -225,7 +225,7 @@ function exportarSVG(blocos, modo) {
     const blocksPerRow = cfgBlocksPerRow > 0 ? cfgBlocksPerRow : Math.max(1, Math.floor(800 / ADVANCE_X));
     const numRows = Math.ceil(blocos.length / blocksPerRow);
     const blockContentH = 5 * CELL_SIZE + 4 * GAP;
-    const extraForLabel = (modo === 'desenho' && toggleTraducao.checked) ? 18 : 0;
+    const extraForLabel = (modo === 'desenho' && toggleTraducao.checked) || (modo === 'texto' && toggleLegendaOriginal && toggleLegendaOriginal.checked) ? 18 : 0;
     const rowH = blockContentH + BLOCK_ROW_GAP + extraForLabel;
 
     const SVG_PAD_LEFT = 10;
@@ -290,6 +290,12 @@ function exportarSVG(blocos, modo) {
                 const labelSize = Math.max(11, Math.min(15, Math.floor(CELL_SIZE * 0.8)));
                 svgParts.push(`<text x="${xOffset + BLOCK_WIDTH / 2}" y="${labelY}" fill="#888" font-family="monospace" font-size="${labelSize}" text-anchor="middle">${texto}</text>`);
             }
+        }
+
+        if (modo === 'texto' && toggleLegendaOriginal && toggleLegendaOriginal.checked && bloco.segmentoOriginal) {
+            const labelY = baseY + blockContentH + 14;
+            const labelSize = Math.max(11, Math.min(15, Math.floor(CELL_SIZE * 0.8)));
+            svgParts.push(`<text x="${xOffset + BLOCK_WIDTH / 2}" y="${labelY}" fill="#888" font-family="monospace" font-size="${labelSize}" text-anchor="middle">${bloco.segmentoOriginal}</text>`);
         }
     });
 
@@ -413,7 +419,7 @@ function desenharEstruturaCentro(ctx, xOffset, baseY = Y_OFFSET_START) {
     ctx.strokeRect(startX, startY, size, size);
 }
 
-function renderizarBlocosEmCanvas(canvas, ctx, blocos) {
+function renderizarBlocosEmCanvas(canvas, ctx, blocos, labels = null) {
     const parent = canvas.parentElement;
     const available = Math.max(280, parent.clientWidth - 24);
     const autoPerRow = Math.max(1, Math.floor(available / ADVANCE_X));
@@ -422,7 +428,8 @@ function renderizarBlocosEmCanvas(canvas, ctx, blocos) {
     const canvasW = Math.min(available, blocksPerRow * ADVANCE_X + 16);
     if (canvas.width !== canvasW) canvas.width = canvasW;
     const blockContentH = 5 * CELL_SIZE + 4 * GAP;
-    const rowH = blockContentH + BLOCK_ROW_GAP;
+    const extraHeight = labels ? 18 : 0;
+    const rowH = blockContentH + BLOCK_ROW_GAP + extraHeight;
     const neededH = Y_OFFSET_START + numRows * rowH + 4;
     if (canvas.height !== neededH) canvas.height = neededH;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -439,6 +446,14 @@ function renderizarBlocosEmCanvas(canvas, ctx, blocos) {
                 const yPos = baseY + (l * (CELL_SIZE + GAP));
                 desenharFormaCelula(ctx, xPos, yPos, estado);
             }
+        }
+        if (labels && labels[i]) {
+            ctx.fillStyle = '#888';
+            const labelSize = Math.max(11, Math.min(15, Math.floor(CELL_SIZE * 0.8)));
+            ctx.font = `${labelSize}px monospace`;
+            ctx.textAlign = 'center';
+            const gridBottom = baseY + blockContentH;
+            ctx.fillText(labels[i], xOffset + BLOCK_WIDTH / 2, gridBottom + 14);
         }
     });
 }
@@ -460,6 +475,7 @@ const canvasText = document.getElementById('canvasText');
 const ctxText = canvasText.getContext('2d');
 const input = document.getElementById('textInput');
 const toggleInputTexto = document.getElementById('toggleInputTexto');
+const toggleLegendaOriginal = document.getElementById('toggleLegendaOriginal');
 
 const mapVogais = { 'A': 0, 'E': 1, 'I': 2, 'O': 3, 'U': 4 };
 const mapConsoantes = {
@@ -492,24 +508,67 @@ function preProcessarTexto(texto) {
     return resultado;
 }
 
+function preProcessWithMapping(texto) {
+    let step1 = texto
+        .replace(/[çÇ]/g, 'S')
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    let result = '';
+    let consumeCount = [];
+    let i = 0;
+    while (i < step1.length) {
+        if (i + 1 < step1.length) {
+            let two = step1.substring(i, i + 2);
+            if (two === 'CH') { result += 'X'; consumeCount.push(2); i += 2; continue; }
+            if (two === 'LH') { result += 'L'; consumeCount.push(2); i += 2; continue; }
+            if (two === 'NH') { result += 'N'; consumeCount.push(2); i += 2; continue; }
+            if (two === 'RR') { result += 'R'; consumeCount.push(2); i += 2; continue; }
+        }
+        let c = step1[i];
+        if (c === 'Y') c = 'I';
+        result += c;
+        consumeCount.push(1);
+        i++;
+    }
+
+    let ri = 0;
+    while (ri < result.length - 1) {
+        let two = result.substring(ri, ri + 2);
+        if (two === 'CE') { result = result.substring(0, ri) + 'SE' + result.substring(ri + 2); ri += 2; }
+        else if (two === 'CI') { result = result.substring(0, ri) + 'SI' + result.substring(ri + 2); ri += 2; }
+        else if (two === 'GE') { result = result.substring(0, ri) + 'JE' + result.substring(ri + 2); ri += 2; }
+        else if (two === 'GI') { result = result.substring(0, ri) + 'JI' + result.substring(ri + 2); ri += 2; }
+        else { ri++; }
+    }
+
+    return { processed: result, consumeCount };
+}
+
 function processarTexto(textoOriginal) {
-    const texto = preProcessarTexto(textoOriginal);
+    const { processed: texto, consumeCount } = preProcessWithMapping(textoOriginal);
     const blocos = [];
     let blocoAtual = { grid: criarMatrizVazia(), hasCenter: false, hasRight: false, cLeft: 0, cCenter: 0, cRight: 0 };
+    let segmentStart = 0;
+    let consumedSoFar = 0;
 
     for (let i = 0; i < texto.length; i++) {
         const char = texto[i];
+
         if (char === ' ') { 
-            // Só cria um novo bloco se o atual tiver conteúdo.
-            // Espaços isolados ou múltiplos não geram blocos vazios.
             if (blocoAtual.hasCenter || blocoAtual.cLeft > 0 || blocoAtual.cRight > 0) {
+                blocoAtual.segmentoOriginal = textoOriginal.substring(segmentStart, segmentStart + consumedSoFar);
                 blocos.push(blocoAtual);
             }
+            segmentStart = segmentStart + consumedSoFar + consumeCount[i];
+            consumedSoFar = 0;
             blocoAtual = { grid: criarMatrizVazia(), hasCenter: false, hasRight: false, cLeft: 0, cCenter: 0, cRight: 0 };
             continue; 
         }
         
         if (mapVogais[char] !== undefined) {
+            consumedSoFar += consumeCount[i];
             let linha = mapVogais[char];
             if (!blocoAtual.hasCenter) {
                 blocoAtual.cLeft++; blocoAtual.grid[linha][0] = Math.min(blocoAtual.cLeft, 4);
@@ -518,23 +577,29 @@ function processarTexto(textoOriginal) {
             }
         } else if (mapConsoantes[char] !== undefined || char === 'S' || char === 'Z') {
             if (blocoAtual.hasRight) { 
+                blocoAtual.segmentoOriginal = textoOriginal.substring(segmentStart, segmentStart + consumedSoFar);
                 blocos.push(blocoAtual); 
+                segmentStart = segmentStart + consumedSoFar;
+                consumedSoFar = 0;
                 blocoAtual = { grid: criarMatrizVazia(), hasCenter: false, hasRight: false, cLeft: 0, cCenter: 0, cRight: 0 }; 
             }
+            consumedSoFar += consumeCount[i];
             blocoAtual.hasCenter = true; blocoAtual.cCenter++;
             const coords = mapConsoantes[char];
             if (coords) blocoAtual.grid[coords[0]][coords[1]] = Math.min(blocoAtual.cCenter, 4);
         }
     }
-    // Só adiciona o último bloco se ele tiver conteúdo real
     if (blocoAtual.hasCenter || blocoAtual.cLeft > 0 || blocoAtual.cRight > 0) {
+        blocoAtual.segmentoOriginal = textoOriginal.substring(segmentStart, segmentStart + consumedSoFar);
         blocos.push(blocoAtual);
     }
     return blocos;
 }
 
 function renderizarModoTexto(blocos) {
-    renderizarBlocosEmCanvas(canvasText, ctxText, blocos);
+    const mostrarLegenda = toggleLegendaOriginal && toggleLegendaOriginal.checked;
+    const labels = mostrarLegenda ? blocos.map(b => b.segmentoOriginal || '') : null;
+    renderizarBlocosEmCanvas(canvasText, ctxText, blocos, labels);
 }
 
 input.addEventListener('input', (e) => renderizarModoTexto(processarTexto(e.target.value)));
@@ -546,10 +611,16 @@ if (toggleInputTexto) {
         input.style.display = toggleInputTexto.checked ? '' : 'none';
     });
 
-    // Estado inicial (caso o toggle venha desmarcado)
     if (!toggleInputTexto.checked) {
         input.style.display = 'none';
     }
+}
+
+// Toggle para mostrar/esconder legenda do texto original por bloco
+if (toggleLegendaOriginal) {
+    toggleLegendaOriginal.addEventListener('change', () => {
+        renderizarModoTexto(processarTexto(input.value));
+    });
 }
 
 
